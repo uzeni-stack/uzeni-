@@ -3,112 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boos - Administrace</title>
+    <title>Admin - Správa zboží</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; text-align: center; }
-        .login-box { max-width: 300px; margin: 100px auto; background: #34495e; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 5px; background: #27ae60; color: white; font-weight: bold; cursor: pointer; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; }
         
-        #admin-content { display: none; }
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #1976d2; font-size: 1.2em; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        /* Formulář */
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        .btn-add { background: #28a745; color: white; border: none; width: 100%; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em; }
         
-        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; max-width: 400px; margin: auto; }
-        .menu-item { background: #3498db; color: white; padding: 25px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 1.2em; box-shadow: 0 4px 0 #2980b9; }
-        .menu-item:active { transform: translateY(4px); box-shadow: none; }
-        
-        .setup-box { background: white; color: #333; padding: 20px; border-radius: 12px; margin-top: 30px; text-align: left; }
-        .prod-list-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee; }
+        /* Seznam tlačítek produktů */
+        .seznam-zbozi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-polozka { 
+            background: white; border: 2px solid #1976d2; color: #1976d2; padding: 20px 10px; 
+            border-radius: 8px; font-weight: bold; text-align: center; cursor: pointer; 
+            text-decoration: none; transition: 0.2s; display: flex; flex-direction: column;
+        }
+        .btn-polozka:hover { background: #1976d2; color: white; }
+        .btn-polozka span { font-size: 0.8em; opacity: 0.8; font-weight: normal; }
+
+        .btn-delete { background: #ff5252; color: white; border: none; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 0.7em; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="login-box">
-        <h2>VSTUP PRO BOOSE</h2>
-        <input type="password" id="heslo" placeholder="Zadej heslo">
-        <button onclick="overit()">VSTOUPIT</button>
+<div class="container">
+    <div class="box">
+        <h2>➕ NOVÉ ZBOŽÍ DO NABÍDKY</h2>
+        <input type="text" id="nazev" placeholder="Název zboží (např. Cabajky)">
+        <input type="number" id="cena" placeholder="Cena za kg (např. 290)">
+        <button class="btn-add" onclick="pridatZbozi()">Uložit a publikovat</button>
     </div>
 
-    <div id="admin-content">
-        <h1>Vítej, Boosi!</h1>
-        
-        <div class="menu-grid">
-            <a href="rozpis.html" class="menu-item">⚖️ VÁŽENÍ U UDÍRNY</a>
-            <a href="finance.html" class="menu-item">💰 MOJE FINANCE</a>
-        </div>
-
-        <div class="setup-box">
-            <h3>🛠️ SPRÁVA NABÍDKY</h3>
-            <p style="font-size: 0.9em; color: #666;">Co zde přidáš, uvidí zákazníci v e-shopu:</p>
-            <input type="text" id="p-nazev" placeholder="Název (např. Bůček)" style="border: 1px solid #ccc;">
-            <input type="number" id="p-cena" placeholder="Cena za kg" style="border: 1px solid #ccc;">
-            <button onclick="pridatDoNabidky()">PŘIDAT DO NABÍDKY</button>
-            <hr>
-            <div id="seznam-nabidky"></div>
-        </div>
-        
-        <button onclick="odhlasit()" style="margin-top:40px; background:#e74c3c; width:auto; padding:10px 20px;">ODHLÁSIT SE</button>
+    <div class="box">
+        <h2>📦 SPRÁVA A VÁŽENÍ</h2>
+        <div id="produkty-seznam" class="seznam-zbozi">
+            </div>
     </div>
+
+    <div style="text-align:center;">
+        <a href="index.html" style="color:#666; text-decoration:none; font-size:0.9em;">Zobrazit e-shop pro lidi</a>
+    </div>
+</div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function overit() {
-        const h = document.getElementById("heslo").value;
-        if (h === "boos123") { // Heslo si můžeš změnit
-            sessionStorage.setItem("priblasen", "ano");
-            zobrazAdmin();
+    // Přidání zboží do databáze
+    function pridatZbozi() {
+        const nazev = document.getElementById("nazev").value;
+        const cena = document.getElementById("cena").value;
+
+        if (nazev && cena) {
+            db.ref("produkty/" + nazev).set(parseInt(cena)).then(() => {
+                document.getElementById("nazev").value = "";
+                document.getElementById("cena").value = "";
+                alert("Zboží přidáno!");
+            });
         } else {
-            alert("Špatné heslo!");
+            alert("Vyplň název i cenu!");
         }
     }
 
-    function zobrazAdmin() {
-        if (sessionStorage.getItem("priblasen") === "ano") {
-            document.getElementById("login-screen").style.display = "none";
-            document.getElementById("admin-content").style.display = "block";
-            nactiNabidku();
+    // Načítání zboží a tvorba tlačítek
+    db.ref("produkty").on("value", (snap) => {
+        const data = snap.val() || {};
+        const seznam = document.getElementById("produkty-seznam");
+        seznam.innerHTML = "";
+
+        for (let nazev in data) {
+            const cena = data[nazev];
+            
+            // Vytvoříme odkaz, který nás hodí do rozpisu a rovnou mu řekne, co chceme vidět
+            const div = document.createElement("div");
+            div.style.display = "flex";
+            div.style.flexDirection = "column";
+
+            div.innerHTML = `
+                <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="btn-polozka">
+                    ${nazev}
+                    <span>${cena} Kč/kg</span>
+                </a>
+                <button class="btn-delete" onclick="smazatProdukt('${nazev}')">Odstranit z nabídky</button>
+            `;
+            seznam.appendChild(div);
+        }
+    });
+
+    function smazatProdukt(nazev) {
+        if(confirm("Opravdu smazat " + nazev + " z nabídky?")) {
+            db.ref("produkty/" + nazev).remove();
         }
     }
-
-    function odhlasit() {
-        sessionStorage.removeItem("priblasen");
-        location.reload();
-    }
-
-    function nactiNabidku() {
-        db.ref("produkty").on("value", (snap) => {
-            const data = snap.val() || {};
-            const div = document.getElementById("seznam-nabidky");
-            div.innerHTML = "<b>Aktuální nabídka:</b>";
-            for (let n in data) {
-                div.innerHTML += `
-                    <div class="prod-list-item">
-                        <span>${n} (${data[n]} Kč)</span>
-                        <button onclick="smazatNabidku('${n}')" style="background:none; color:red; width:auto; padding:0; cursor:pointer;">[SMAZAT]</button>
-                    </div>`;
-            }
-        });
-    }
-
-    function pridatDoNabidky() {
-        const n = document.getElementById("p-nazev").value;
-        const c = document.getElementById("p-cena").value;
-        if (n && c) {
-            db.ref("produkty/" + n).set(parseInt(c));
-            document.getElementById("p-nazev").value = "";
-            document.getElementById("p-cena").value = "";
-        }
-    }
-
-    function smazatNabidku(n) {
-        if (confirm("Opravdu smazat " + n + " z e-shopu?")) db.ref("produkty/" + n).remove();
-    }
-
-    zobrazAdmin();
 </script>
 
 </body>
