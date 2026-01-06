@@ -3,50 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rozpis uzení - Sekce</title>
+    <title>Rozpis vážení - Konkrétní list</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
-        .container { max-width: 900px; margin: auto; }
+        .container { max-width: 800px; margin: auto; }
         
-        .hlavicka { background: #1976d2; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        
-        /* Styl pro sekci zboží */
-        .sekce-zbozi { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; overflow: hidden; border-top: 5px solid #1976d2; }
-        .nadpis-zbozi { background: #e3f2fd; padding: 12px 20px; margin: 0; color: #1565c0; text-transform: uppercase; font-size: 1.2em; border-bottom: 1px solid #bbdefb; }
+        .hlavicka { background: #1976d2; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .hlavicka h2 { margin: 0; text-transform: uppercase; }
 
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f8f9fa; padding: 10px; text-align: left; font-size: 0.75em; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
-        td { padding: 12px 15px; border-bottom: 1px solid #f1f1f1; vertical-align: middle; }
-
-        .zakaznik { font-weight: bold; font-size: 1.1em; }
-        .vaha-chce { background: #fff3cd; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #856404; }
+        .karta { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 6px solid #1976d2; display: flex; justify-content: space-between; align-items: center; }
         
-        .vstup { width: 75px; padding: 8px; border: 2px solid #1976d2; border-radius: 6px; font-weight: bold; text-align: center; font-size: 1.1em; }
+        .zakaznik-info { flex: 1; }
+        .jmeno { font-weight: bold; font-size: 1.2em; display: block; }
+        .vaha-chce { color: #856404; background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
+
+        .vstupy { display: flex; gap: 10px; }
+        .vstup-skupina { display: flex; flex-direction: column; }
+        .vstup-skupina label { font-size: 0.7em; color: #777; font-weight: bold; }
+
+        .vstup { width: 80px; padding: 8px; border: 2px solid #1976d2; border-radius: 6px; font-weight: bold; text-align: center; }
         .vstup-zapl { border-color: #2e7d32; color: #2e7d32; }
 
-        .cena-celkem { font-weight: 900; color: #d32f2f; font-size: 1.2em; white-space: nowrap; }
-        .btn-ok { background: #2e7d32; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
-
-        .dluhy-sekce { background: #ffebee; border: 2px solid #c62828; border-radius: 8px; padding: 15px; margin-top: 40px; }
-        .dluh-radek { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #c62828; font-weight: bold; color: #b71c1c; }
+        .cena-vysledek { font-size: 1.3em; font-weight: 900; color: #d32f2f; min-width: 90px; text-align: right; }
+        
+        .btn-ok { background: #2e7d32; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .zpet { color: white; text-decoration: none; border: 1px solid white; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="hlavicka">
-        <h2 style="margin:0;">⚖️ ROZPIS DLE ZBOŽÍ</h2>
-        <a href="admin.html" style="color:white; text-decoration:none; font-weight:bold; border:1px solid white; padding:5px 10px; border-radius:5px;">ZPĚT</a>
+        <h2 id="nazev-stranky">Načítám...</h2>
+        <a href="admin.html" class="zpet">ZPĚT</a>
     </div>
 
-    <div id="vypis-sekci"></div>
-
-    <div class="dluhy-sekce">
-        <h3>🛑 SEZNAM DLUŽNÍKŮ</h3>
-        <div id="seznam-dluhu"></div>
-    </div>
+    <div id="seznam-lidi"></div>
 </div>
 
 <script>
@@ -54,109 +48,94 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let cenik = {};
-    db.ref("produkty").on("value", (s) => { cenik = s.val() || {}; });
+    // 1. Zjistíme z adresy, na které zboží jsme klikli
+    const urlParams = new URLSearchParams(window.location.search);
+    const produktFiltr = urlParams.get('filtr');
+    
+    if (produktFiltr) {
+        document.getElementById("nazev-stranky").innerText = produktFiltr;
+    }
 
-    db.ref("objednavky").on("value", (snap) => {
-        if (document.activeElement.tagName === "INPUT") return;
-        
-        const data = snap.val() || {};
-        const vypis = document.getElementById("vypis-sekci");
-        vypis.innerHTML = "";
+    let cenaZaKg = 0;
 
-        // 1. Rozdělení objednávek do skupin podle zboží
-        let skupiny = {};
-        for (let id in data) {
-            let zbozi = data[id].produkty;
-            if (!skupiny[zbozi]) skupiny[zbozi] = [];
-            skupiny[zbozi].push({ id, ...data[id] });
-        }
-
-        // 2. Vytvoření tabulky pro každou skupinu (seřazeno abecedně)
-        Object.keys(skupiny).sort().forEach(nazevZbozi => {
-            let sekce = document.createElement("div");
-            sekce.className = "sekce-zbozi";
-            
-            let nadpis = `<h3 class="nadpis-zbozi">📦 ${nazevZbozi}</h3>`;
-            let tabulka = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Zákazník</th>
-                            <th>Objednáno</th>
-                            <th>Váha (g)</th>
-                            <th>Cena</th>
-                            <th>Zaplatil</th>
-                            <th>Akce</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-            
-            skupiny[nazevZbozi].forEach(obj => {
-                const cenaKg = cenik[obj.produkty] || 0;
-                const gramy = obj.skutecna_vaha_gr || 0;
-                const kPlatbe = Math.round((gramy / 1000) * cenaKg);
-                const zapl = obj.zaplaceno || 0;
-
-                tabulka += `
-                    <tr>
-                        <td><span class="zakaznik">${obj.zakaznik}</span></td>
-                        <td><span class="vaha-chce">${obj.vaha} kg</span></td>
-                        <td>
-                            <input type="number" class="vstup" id="vaha-${obj.id}" value="${gramy || ''}" 
-                                   oninput="prepocitej('${obj.id}', ${cenaKg})"
-                                   onchange="upd('${obj.id}', 'skutecna_vaha_gr', this.value)">
-                        </td>
-                        <td class="cena-celkem" id="kplatbe-${obj.id}">${kPlatbe} Kč</td>
-                        <td>
-                            <input type="number" class="vstup vstup-zapl" id="zapl-${obj.id}" value="${zapl || ''}" 
-                                   oninput="prepocitej('${obj.id}', ${cenaKg})"
-                                   onchange="upd('${obj.id}', 'zaplaceno', this.value)">
-                        </td>
-                        <td>
-                            <button class="btn-ok" onclick="hotovo('${obj.id}', '${obj.zakaznik}', '${obj.produkty}')">HOTOVO</button>
-                        </td>
-                    </tr>`;
-            });
-
-            tabulka += `</tbody></table>`;
-            sekce.innerHTML = nadpis + tabulka;
-            vypis.appendChild(sekce);
-        });
+    // 2. Nejdřív zjistíme cenu pro tento produkt
+    db.ref("produkty/" + produktFiltr).on("value", (s) => {
+        cenaZaKg = s.val() || 0;
+        nactiData(); // Až když máme cenu, načteme lidi
     });
 
-    function prepocitej(id, cenaZaKg) {
-        const gramy = document.getElementById("vaha-" + id).value || 0;
-        const kPlatbe = Math.round((gramy / 1000) * cenaZaKg);
-        document.getElementById("kplatbe-" + id).innerText = kPlatbe + " Kč";
+    // 3. Načtení lidí jen z konkrétního "listu"
+    function nactiData() {
+        // Tady je ta hlavní změna: db.ref("objednavky/" + produktFiltr)
+        db.ref("objednavky/" + produktFiltr).on("value", (snap) => {
+            if (document.activeElement.tagName === "INPUT") return;
+
+            const data = snap.val() || {};
+            const vypis = document.getElementById("seznam-lidi");
+            vypis.innerHTML = "";
+
+            for (let id in data) {
+                const obj = data[id];
+                const gramy = obj.skutecna_vaha_gr || 0;
+                const zaplaceno = obj.zaplaceno || 0;
+                const kPlatbe = Math.round((gramy / 1000) * cenaZaKg);
+
+                const div = document.createElement("div");
+                div.className = "karta";
+                div.innerHTML = `
+                    <div class="zakaznik-info">
+                        <span class="jmeno">${obj.zakaznik}</span>
+                        <span class="vaha-chce">Objednáno: ${obj.vaha} kg</span>
+                    </div>
+                    <div class="vstupy">
+                        <div class="vstup-skupina">
+                            <label>VÁHA (g)</label>
+                            <input type="number" class="vstup" id="vaha-${id}" value="${gramy || ''}" 
+                                   oninput="prepocitej('${id}')" 
+                                   onchange="upd('${id}', 'skutecna_vaha_gr', this.value)">
+                        </div>
+                        <div class="vstup-skupina">
+                            <label>ZAPLATIL</label>
+                            <input type="number" class="vstup vstup-zapl" id="zapl-${id}" value="${zaplaceno || ''}" 
+                                   oninput="prepocitej('${id}')" 
+                                   onchange="upd('${id}', 'zaplaceno', this.value)">
+                        </div>
+                    </div>
+                    <div class="cena-vysledek" id="cena-${id}">${kPlatbe} Kč</div>
+                    <button class="btn-ok" onclick="hotovo('${id}', '${obj.zakaznik}')">OK</button>
+                `;
+                vypis.appendChild(div);
+            }
+            if (vypis.innerHTML === "") {
+                vypis.innerHTML = "<p style='text-align:center; padding:50px; color:#888;'>Žádné objednávky v tomto listu.</p>";
+            }
+        });
     }
 
-    function upd(id, p, v) {
-        db.ref("objednavky/" + id).update({ [p]: parseInt(v) || 0 });
+    function prepocitej(id) {
+        const g = document.getElementById("vaha-" + id).value || 0;
+        const vysledek = Math.round((g / 1000) * cenaZaKg);
+        document.getElementById("cena-" + id).innerText = vysledek + " Kč";
     }
 
-    function hotovo(id, jm, zb) {
-        const kPlatbe = parseInt(document.getElementById("kplatbe-" + id).innerText);
-        const zaplaceno = parseInt(document.getElementById("zapl-" + id).value) || 0;
-        const doplata = kPlatbe - zaplaceno;
+    function upd(id, pole, hodnota) {
+        // Ukládáme zpět do správného listu
+        db.ref("objednavky/" + produktFiltr + "/" + id).update({ [pole]: parseInt(hodnota) || 0 });
+    }
 
-        if (doplata > 0) {
-            if (confirm(`Zapsat dluh ${doplata} Kč pro ${jm}?`)) {
-                db.ref("dluhy").push({ jmeno: jm, zbozi: zb, castka: doplata });
+    function hotovo(id, jm) {
+        const kPlatbe = parseInt(document.getElementById("cena-" + id).innerText);
+        const zapl = parseInt(document.getElementById("zapl-" + id).value) || 0;
+        const dluh = kPlatbe - zapl;
+
+        if (dluh > 0) {
+            if (confirm(`Zapsat dluh ${dluh} Kč?`)) {
+                db.ref("dluhy").push({ jmeno: jm, zbozi: produktFiltr, castka: dluh });
             }
         }
-        db.ref("objednavky/" + id).remove();
+        // Smaže jen tuto jednu objednávku z konkrétního listu
+        db.ref("objednavky/" + produktFiltr + "/" + id).remove();
     }
-
-    db.ref("dluhy").on("value", (snap) => {
-        const dluhy = snap.val() || {};
-        const div = document.getElementById("seznam-dluhu");
-        div.innerHTML = "";
-        for (let id in dluhy) {
-            const d = dluhy[id];
-            div.innerHTML += `<div class="dluh-radek"><span>${d.jmeno} - ${d.zbozi}</span><span>${d.castka} Kč <button onclick="db.ref('dluhy/${id}').remove()">Smazat</button></span></div>`;
-        }
-    });
 </script>
 
 </body>
