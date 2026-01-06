@@ -3,35 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rozpis k vážení - Boos</title>
+    <title>Rozpis a Dluhy - Boos</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .container { max-width: 900px; margin: auto; }
-        .zbozi-sekce { background: white; margin-bottom: 25px; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #1976d2; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
+        .container { max-width: 1000px; margin: auto; }
+        .zbozi-sekce { background: white; margin-bottom: 25px; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #1976d2; }
         .zbozi-hlavicka { background: #1976d2; color: white; padding: 12px 15px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th { background: #e3f2fd; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 12px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { background: #e3f2fd; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 11px; text-transform: uppercase; }
         td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
         .zebra tr:nth-child(even) { background: #f9f9f9; }
-        .input-vaha { width: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; text-align: center; }
-        .btn-save { background: #2e7d32; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .btn-save:hover { background: #1b5e20; }
-        .vysledek { font-weight: bold; color: #1976d2; }
-        .suma-row { background: #eee !important; font-weight: bold; }
+        .input-vaha { width: 65px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
+        .input-penize { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; }
+        .btn-save { background: #2e7d32; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .dluh-vypis { font-weight: bold; color: #d32f2f; }
+        .ok-vypis { font-weight: bold; color: #2e7d32; }
+        .no-print { margin-bottom: 10px; }
         @media print { .no-print { display: none; } .zbozi-sekce { border: 1px solid #000; break-inside: avoid; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-        <h2 style="margin:0;">📊 Rozpis a vážení</h2>
-        <button onclick="window.print()" style="padding: 8px 15px; cursor:pointer;">TISK</button>
+    <div class="no-print" style="display: flex; justify-content: space-between; padding: 10px 0;">
+        <h2 style="margin:0;">📊 Váha a Pokladna</h2>
+        <button onclick="window.print()">TISK ROZPISU</button>
     </div>
-
-    <div id="vypis-zbozi">Načítám objednávky...</div>
+    <div id="vypis-zbozi">Načítám...</div>
 </div>
 
 <script>
@@ -41,83 +41,75 @@
 
     let cenyZbozi = {};
 
-    // 1. Nejdřív načteme aktuální ceny z administrace
     db.ref("produkty").on("value", (snap) => {
         cenyZbozi = snap.val() || {};
         nactiData();
     });
 
-    // 2. Načteme objednávky a vykreslíme tabulky
     function nactiData() {
         db.ref("objednavky").on("value", (snap) => {
             const data = snap.val();
             const vystup = document.getElementById("vypis-zbozi");
             vystup.innerHTML = "";
-
-            if (!data) { vystup.innerHTML = "Žádné objednávky."; return; }
+            if (!data) return;
 
             let seskupeno = {};
             for (let id in data) {
-                let o = data[id];
-                o.id = id; // Uložíme si ID pro pozdější zápis
+                let o = data[id]; o.id = id;
                 if (!seskupeno[o.produkty]) seskupeno[o.produkty] = [];
                 seskupeno[o.produkty].push(o);
             }
 
             for (let produkt in seskupeno) {
                 let cenaKg = cenyZbozi[produkt] || 0;
-                let html = `
-                    <div class="zbozi-sekce">
-                        <div class="zbozi-hlavicka"><span>📦 ${produkt}</span> <span>${cenaKg} Kč/kg</span></div>
-                        <table class="zebra">
-                            <thead>
-                                <tr>
-                                    <th>Zákazník</th>
-                                    <th>Objednáno</th>
-                                    <th>Skutečnost (gr)</th>
-                                    <th>Cena</th>
-                                    <th class="no-print">Akce</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-                
+                let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${produkt}</span> <span>${cenaKg} Kč/kg</span></div>
+                    <table class="zebra"><thead><tr>
+                        <th>Zákazník</th><th>Objednáno</th><th>Váha (gr)</th><th>Cena</th><th>Zaplaceno</th><th>Rozdíl</th><th class="no-print">Akce</th>
+                    </tr></thead><tbody>`;
+
                 seskupeno[produkt].forEach(obj => {
-                    // Pokud už máme v databázi uloženou skutečnou váhu, použijeme ji
                     let skv = obj.skutecna_vaha_gr || "";
-                    let vypoctenaCena = obj.skutecna_cena || 0;
+                    let cena = obj.skutecna_cena || 0;
+                    let zaplaceno = obj.zaplaceno || 0;
+                    let rozdil = zaplaceno - cena;
 
-                    html += `
-                        <tr id="row-${obj.id}">
-                            <td><b>${obj.zakaznik}</b></td>
-                            <td>${obj.vaha} kg</td>
-                            <td><input type="number" class="input-vaha" value="${skv}" placeholder="gr" id="in-gr-${obj.id}"></td>
-                            <td class="vysledek" id="res-${obj.id}">${vypoctenaCena > 0 ? vypoctenaCena + " Kč" : "-"}</td>
-                            <td class="no-print">
-                                <button class="btn-save" onclick="ulozVahu('${obj.id}', ${cenaKg})">ULOŽIT</button>
-                            </td>
-                        </tr>`;
+                    html += `<tr>
+                        <td><b>${obj.zakaznik}</b></td>
+                        <td>${obj.vaha} kg</td>
+                        <td><input type="number" class="input-vaha" value="${skv}" oninput="vypocetNaRadku('${obj.id}', ${cenaKg})" id="gr-${obj.id}"></td>
+                        <td id="cen-${obj.id}">${cena} Kč</td>
+                        <td><input type="number" class="input-penize" value="${zaplaceno}" oninput="vypocetNaRadku('${obj.id}', ${cenaKg})" id="pay-${obj.id}"></td>
+                        <td id="dif-${obj.id}" class="${rozdil < 0 ? 'dluh-vypis' : 'ok-vypis'}">${rozdil} Kč</td>
+                        <td class="no-print"><button class="btn-save" onclick="ulozRadek('${obj.id}', ${cenaKg})">ULOŽIT</button></td>
+                    </tr>`;
                 });
-
-                html += `</tbody></table></div>`;
-                vystup.innerHTML += html;
+                vystup.innerHTML += html + `</tbody></table></div>`;
             }
         });
     }
 
-    // 3. Funkce pro uložení dat do Firebase
-    function ulozVahu(id, cenaZaKg) {
-        const gr = document.getElementById(`in-gr-${id}`).value;
-        if (!gr || gr <= 0) return alert("Zadej gramy!");
+    function vypocetNaRadku(id, cenaKg) {
+        let gr = document.getElementById(`gr-${id}`).value || 0;
+        let pay = document.getElementById(`pay-${id}`).value || 0;
+        let cena = Math.round((gr / 1000) * cenaKg);
+        let rozdil = pay - cena;
+        
+        document.getElementById(`cen-${id}`).innerText = cena + " Kč";
+        let difEl = document.getElementById(`dif-${id}`);
+        difEl.innerText = rozdil + " Kč";
+        difEl.className = rozdil < 0 ? 'dluh-vypis' : 'ok-vypis';
+    }
 
-        const finalniCena = Math.round((gr / 1000) * cenaZaKg);
+    function ulozRadek(id, cenaKg) {
+        const gr = parseInt(document.getElementById(`gr-${id}`).value) || 0;
+        const pay = parseInt(document.getElementById(`pay-${id}`).value) || 0;
+        const cena = Math.round((gr / 1000) * cenaKg);
 
-        // Zapíšeme do Firebase k té konkrétní objednávce
         db.ref("objednavky/" + id).update({
-            skutecna_vaha_gr: parseInt(gr),
-            skutecna_cena: finalniCena
-        }).then(() => {
-            alert("Uloženo!");
-        });
+            skutecna_vaha_gr: gr,
+            skutecna_cena: cena,
+            zaplaceno: pay
+        }).then(() => { alert("Uloženo k " + id); });
     }
 </script>
 </body>
