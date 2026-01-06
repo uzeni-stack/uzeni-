@@ -3,29 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOOS - Aktuální uzení</title>
+    <title>Uzení u Boose - Objednávka</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: auto; }
-        header { text-align: center; padding: 20px 0; border-bottom: 2px solid #1976d2; margin-bottom: 30px; }
-        h1 { margin: 0; color: #1976d2; letter-spacing: 2px; }
-        .karta { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #1976d2; }
-        .jmeno { font-weight: bold; font-size: 1.2em; display: block; margin-bottom: 5px; }
-        .produkty { color: #666; font-style: italic; }
-        .vaha { float: right; font-weight: bold; color: #1976d2; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; margin: 0; padding: 15px; }
+        .shop-container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #1976d2; }
+        
+        .produkt-radek { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .btn-add { background: #1976d2; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        
+        .kosik { margin-top: 30px; background: #e3f2fd; padding: 15px; border-radius: 10px; border: 1px solid #1976d2; }
+        .kosik h3 { margin-top: 0; color: #1565c0; }
+        
+        input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-odeslat { width: 100%; background: #2e7d32; color: white; border: none; padding: 15px; border-radius: 5px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>UDÍRNA BOOS</h1>
-        <p>Aktuálně připravované objednávky</p>
-    </header>
+<div class="shop-container">
+    <h1>🔥 UDÍRNA BOOS</h1>
+    <p style="text-align:center;">Vyberte si na co máte chuť:</p>
 
-    <div id="vypis-verejny">Načítám objednávky...</div>
+    <div id="seznam-produktu">Načítám nabídku...</div>
+
+    <div class="kosik">
+        <h3>🛒 Váš košík</h3>
+        <div id="obsah-kosiku">Košík je prázdný</div>
+        <input type="text" id="zakaznik-jmeno" placeholder="Vaše jméno a příjmení">
+        <button class="btn-odeslat" onclick="odeslatObjednavku()">ODESLAT OBJEDNÁVKU</button>
+    </div>
 </div>
 
 <script>
@@ -33,22 +42,72 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    db.ref("objednavky").on("value", (snap) => {
-        const data = snap.val();
-        const div = document.getElementById("vypis-verejny");
-        if (!data) { div.innerHTML = "<p style='text-align:center;'>Momentálně neudíme žádné nové objednávky.</p>"; return; }
-        
+    let produktyData = {};
+    let kosik = [];
+
+    // 1. Načtení produktů z DB
+    db.ref("produkty").on("value", (snap) => {
+        produktyData = snap.val() || {};
+        const div = document.getElementById("seznam-produktu");
         div.innerHTML = "";
-        for (let id in data) {
-            let o = data[id];
+        for (let nazev in produktyData) {
             div.innerHTML += `
-                <div class="karta">
-                    <span class="vaha">${o.vaha} kg</span>
-                    <span class="jmeno">${o.zakaznik}</span>
-                    <span class="produkty">${o.produkty}</span>
+                <div class="produkt-radek">
+                    <span><b>${nazev}</b> (${produktyData[nazev]} Kč/kg)</span>
+                    <button class="btn-add" onclick="pridatDoKosiku('${nazev}')">Přidat 0.5kg</button>
                 </div>`;
         }
     });
+
+    // 2. Správa košíku
+    function pridatDoKosiku(nazev) {
+        let index = kosik.findIndex(item => item.nazev === nazev);
+        if (index > -1) {
+            kosik[index].vaha += 0.5;
+        } else {
+            kosik.push({ nazev: nazev, vaha: 0.5 });
+        }
+        vykresliKosik();
+    }
+
+    function vykresliKosik() {
+        const div = document.getElementById("obsah-kosiku");
+        if (kosik.length === 0) { div.innerHTML = "Košík je prázdný"; return; }
+        div.innerHTML = kosik.map((item, i) => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>${item.nazev}</span>
+                <span><b>${item.vaha} kg</b> <button onclick="odebrat(${i})" style="color:red; background:none; border:none; cursor:pointer;">x</button></span>
+            </div>
+        `).join("");
+    }
+
+    function odebrat(i) {
+        kosik.splice(i, 1);
+        vykresliKosik();
+    }
+
+    // 3. Odeslání do Firebase
+    function odeslatObjednavku() {
+        const jmeno = document.getElementById("zakaznik-jmeno").value;
+        if (!jmeno || kosik.length === 0) { alert("Zadejte jméno a vyberte zboží!"); return; }
+
+        kosik.forEach(polozka => {
+            db.ref("objednavky").push({
+                zakaznik: jmeno,
+                produkty: polozka.nazev,
+                vaha: polozka.vaha,
+                skutecna_vaha_gr: 0,
+                skutecna_cena: 0,
+                zaplaceno: 0,
+                datum: new Date().toLocaleDateString()
+            });
+        });
+
+        alert("Objednávka byla odeslána! Děkujeme.");
+        kosik = [];
+        document.getElementById("zakaznik-jmeno").value = "";
+        vykresliKosik();
+    }
 </script>
 </body>
 </html>
