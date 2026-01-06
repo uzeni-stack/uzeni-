@@ -10,12 +10,18 @@
         :root { --primary: #1976d2; --success: #2e7d32; --danger: #d32f2f; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
         
-        .header { background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        /* Horní lišta */
+        .header { 
+            background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 100; 
+        }
         .header h2 { margin: 0; color: var(--primary); text-transform: uppercase; font-size: 1.2rem; }
-        .btn-zpet { text-decoration: none; color: #666; font-weight: bold; border: 1px solid #ccc; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; }
+        .btn-zpet { text-decoration: none; color: #666; font-weight: bold; border: 1px solid #ccc; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; background: #fff; }
 
-        .container { max-width: 900px; margin: 20px auto; padding: 0 10px; }
+        .container { max-width: 950px; margin: 20px auto; padding: 0 10px; }
 
+        /* Karta zákazníka */
         .karta { 
             background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; 
@@ -23,58 +29,68 @@
         }
 
         .info { flex: 1; min-width: 200px; }
-        .jmeno { font-size: 1.3rem; font-weight: 800; display: block; margin-bottom: 5px; }
-        .chce { background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 5px; font-size: 0.85rem; font-weight: bold; }
+        .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
+        .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; border: 1px solid #ffeeba; }
 
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
+        label { font-size: 0.75rem; font-weight: bold; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .input-vaha { width: 100px; padding: 12px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; }
-        
-        .cena-box { min-width: 120px; text-align: center; }
-        .cena-cislo { font-size: 1.6rem; font-weight: 900; color: var(--danger); display: block; }
-        .cena-label { font-size: 0.65rem; font-weight: bold; color: var(--danger); text-transform: uppercase; }
+        /* Vstupy */
+        .input-vaha { width: 110px; padding: 12px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.3rem; font-weight: bold; text-align: center; outline: none; }
+        .input-vaha:focus { background: #f0f7ff; }
 
-        .input-platba { width: 100px; padding: 12px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
+        /* Prostřední box s cenou */
+        .cena-box { min-width: 140px; text-align: center; padding: 5px; border-left: 1px solid #eee; border-right: 1px solid #eee; }
+        .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; line-height: 1; }
+        .cena-label { font-size: 0.7rem; font-weight: bold; color: var(--danger); text-transform: uppercase; margin-bottom: 5px; display: block; }
 
+        .input-platba { width: 110px; padding: 12px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.3rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
+        .input-platba:focus { background: #e8f5e9; }
+
+        /* Tlačítko */
         .btn-ok { 
-            background: var(--success); color: white; border: none; padding: 15px 25px; 
+            background: var(--success); color: white; border: none; padding: 15px 30px; 
             border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; 
-            box-shadow: 0 4px 0 #1b5e20;
+            box-shadow: 0 4px 0 #1b5e20; font-size: 1rem;
         }
+        .btn-ok:hover { background: #388e3c; }
         .btn-ok:active { transform: translateY(3px); box-shadow: none; }
 
-        .prazdno { text-align: center; padding: 50px; color: #999; }
+        .prazdno { text-align: center; padding: 60px; color: #aaa; background: white; border-radius: 15px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2 id="produkt-nadpis">Rozpis</h2>
-        <a href="admin.html" class="btn-zpet">ZPĚT</a>
+        <h2 id="produkt-nadpis">Načítám...</h2>
+        <a href="admin.html" class="btn-zpet">ZPĚT DO ADMINA</a>
     </div>
 
     <div class="container" id="seznam-lidi">
         </div>
 
 <script>
+    // TVOJE KONFIGURACE FIREBASE
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Získání filtru z URL (např. rozpis.html?filtr=Klobásy)
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
-    document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis";
+    document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis vážení";
 
     let cenaKg = 0;
 
-    // Načtení ceny za kg
+    // 1. Nejprve zjistíme cenu produktu za kg
     db.ref("produkty/" + filtr).once("value", (s) => {
         cenaKg = s.val() || 0;
         
-        // Načtení lidí v tomto listu
+        // 2. Poté načteme všechny lidi, co si tento produkt objednali
         db.ref("objednavky/" + filtr).on("value", (snap) => {
+            // Pokud právě píšeme do políčka, nepřekreslovat (aby nám nezmizela klávesnice)
             if (document.activeElement.tagName === "INPUT") return;
+            
             const data = snap.val() || {};
             const vypis = document.getElementById("seznam-lidi");
             vypis.innerHTML = "";
@@ -93,8 +109,9 @@
                         </div>
 
                         <div class="sloupec">
-                            <label>Váha (gramy)</label>
+                            <label>Váha v gramech</label>
                             <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" 
+                                   placeholder="0"
                                    oninput="prepocitej('${id}')" 
                                    onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                         </div>
@@ -105,33 +122,51 @@
                         </div>
 
                         <div class="sloupec">
-                            <label>ZAPLATIL (Kč)</label>
+                            <label>Zákazník dal (Kč)</label>
                             <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" 
+                                   placeholder="0"
                                    onchange="uloz('${id}','zaplaceno',this.value)">
                         </div>
 
                         <button class="btn-ok" onclick="potvrdit('${id}','${obj.zakaznik}')">HOTOVO</button>
                     </div>`;
             }
-            if(vypis.innerHTML === "") vypis.innerHTML = '<div class="prazdno"><h3>Vše hotovo! ✅</h3></div>';
+            
+            if(vypis.innerHTML === "") {
+                vypis.innerHTML = '<div class="prazdno"><h3>Všechno hotovo! Žádné další objednávky. ✅</h3></div>';
+            }
         });
     });
 
+    // Funkce pro okamžitý přepočet ceny při psaní gramů
     function prepocitej(id) {
         const g = document.getElementById("v-" + id).value || 0;
         const vysledek = Math.round((g / 1000) * cenaKg);
         document.getElementById("c-" + id).innerText = vysledek + " Kč";
     }
 
-    function uloz(id, pole, v) {
-        db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(v) || 0 });
+    // Ukládání rozpracovaných dat (váha/peníze) do DB, aby se při refresh neztratila
+    function uloz(id, pole, hodnota) {
+        db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(hodnota) || 0 });
     }
 
-    function potvrdit(id, jm) {
-        const dluh = parseInt(document.getElementById("c-" + id).innerText) - (parseInt(document.getElementById("z-" + id).value) || 0);
-        if (dluh > 0 && confirm("Zákazník dluží " + dluh + " Kč. Zapsat?")) {
-            db.ref("dluhy").push({ jmeno: jm, zbozi: filtr, castka: dluh, datum: new Date().toLocaleDateString() });
+    // AUTOMATICKÉ POTVRZENÍ A ZÁPIS DLUHU
+    function potvrdit(id, jmeno) {
+        const cenaKPlaceni = parseInt(document.getElementById("c-" + id).innerText);
+        const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
+        const rozdil = cenaKPlaceni - zaplaceno;
+
+        // Pokud zákazník zaplatil méně, vytvoří se AUTOMATICKY dluh
+        if (rozdil > 0) {
+            db.ref("dluhy").push({ 
+                jmeno: jmeno, 
+                zbozi: filtr, 
+                castka: rozdil, 
+                datum: new Date().toLocaleDateString() 
+            });
         }
+
+        // Smazání objednávky z aktuálního seznamu (přesune se do "vyřízených" smazáním)
         db.ref("objednavky/" + filtr + "/" + id).remove();
     }
 </script>
