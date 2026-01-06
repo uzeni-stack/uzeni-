@@ -10,13 +10,14 @@
         :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; }
         
-        /* Horní tmavá lišta */
         .hlavicka { background: var(--primary); color: white; padding: 25px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .hlavicka h1 { margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 1.5rem; }
 
+        /* Stavový řádek připojení */
+        #status-bar { background: #ffeb3b; color: #000; text-align: center; padding: 5px; font-size: 0.8rem; font-weight: bold; display: none; }
+
         .obsah { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         
-        /* Levý panel - Seznam listů */
         .sidebar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); align-self: start; }
         .sidebar h3 { margin-top: 0; color: var(--primary); font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
         
@@ -24,42 +25,34 @@
         .polozka-listu { flex: 1; padding: 12px 15px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: #333; font-weight: bold; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .polozka-listu:hover { background: #e3f2fd; border-color: #1976d2; color: #1976d2; }
         
-        .btn-smazat-produkt { background: #fff5f5; color: var(--danger); border: 1px solid #ffcdd2; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 40px; }
+        .btn-smazat-produkt { background: #fff5f5; color: var(--danger); border: 1px solid #ffcdd2; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 40px; text-align: center; }
         .btn-smazat-produkt:hover { background: var(--danger); color: white; border-color: var(--danger); }
 
-        /* Hlavní část - Dluhy a Formulář */
         .hlavni-panel { display: flex; flex-direction: column; gap: 20px; }
         .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .box h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .box h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
 
-        /* Tabulka dluhů */
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; background: #f8f9fa; padding: 12px 10px; font-size: 0.85rem; color: #666; text-transform: uppercase; }
         td { padding: 15px 10px; border-bottom: 1px solid #eee; }
-        .dluh-jmeno { font-weight: bold; color: #1a1a1a; }
-        .dluh-castka { color: var(--danger); font-weight: 800; font-size: 1.1rem; }
-        .btn-zaplaceno { background: var(--success); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-zaplaceno:hover { background: #1b5e20; transform: scale(1.05); }
+        .dluh-castka { color: var(--danger); font-weight: 800; }
+        
+        .btn-zaplaceno { background: var(--success); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-zaplaceno:hover { background: #1b5e20; }
 
-        /* Suma dluhů */
         .suma-area { text-align: right; margin-top: 20px; padding-top: 15px; border-top: 2px solid #eee; }
         .suma-text { font-size: 1.4rem; font-weight: 900; color: var(--danger); }
 
-        /* Formulář přidání */
         .input-group { display: flex; flex-direction: column; gap: 10px; }
-        input { padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.2s; }
-        input:focus { border-color: var(--primary); }
-        .btn-pridat { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; margin-top: 10px; }
-        .btn-pridat:hover { background: #000051; }
+        input { padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; outline: none; }
+        .btn-pridat { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
 
-        @media (max-width: 800px) {
-            .obsah { grid-template-columns: 1fr; }
-            .sidebar { order: 2; }
-            .hlavni-panel { order: 1; }
-        }
+        @media (max-width: 800px) { .obsah { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
+
+<div id="status-bar">⚠️ PŘIPOJOVÁNÍ K DATABÁZI...</div>
 
 <div class="hlavicka">
     <h1>ADMINISTRACE PRODEJE</h1>
@@ -68,13 +61,10 @@
 <div class="obsah">
     <div class="sidebar">
         <h3>📂 LISTY K VÁŽENÍ</h3>
-        <div id="produkty-seznam">
-            <p style="color:#999; text-align:center;">Načítám listy...</p>
-        </div>
+        <div id="produkty-seznam">Načítám data...</div>
     </div>
 
     <div class="hlavni-panel">
-        
         <div class="box" style="border-top: 5px solid var(--danger);">
             <h3>🔴 SEZNAM DLUŽNÍKŮ</h3>
             <table>
@@ -87,7 +77,7 @@
                     </tr>
                 </thead>
                 <tbody id="dluhy-tabulka">
-                    <tr><td colspan="4" style="text-align:center; padding:30px; color:#999;">Žádné dluhy v evidenci.</td></tr>
+                    <tr><td colspan="4" style="text-align:center; padding:30px; color:#999;">Čekám na data...</td></tr>
                 </tbody>
             </table>
             <div class="suma-area" id="suma-box" style="display:none;">
@@ -103,48 +93,54 @@
                 <button class="btn-pridat" onclick="vytvoritProdukt()">PŘIDAT DO NABÍDKY</button>
             </div>
         </div>
-
     </div>
 </div>
 
 <script>
     // --- KONFIGURACE ---
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
-    firebase.initializeApp(firebaseConfig);
+    
+    try {
+        firebase.initializeApp(firebaseConfig);
+    } catch (e) {
+        alert("Chyba při startu Firebase: " + e.message);
+    }
+    
     const db = firebase.database();
+    const status = document.getElementById("status-bar");
 
-    // 1. NAČÍTÁNÍ PRODUKTŮ DO SIDEBARU + FUNKCE SMAZAT LIST
+    // --- HLÍDAČ PŘIPOJENÍ ---
+    db.ref(".info/connected").on("value", (snap) => {
+        if (snap.val() === true) {
+            status.style.display = "none";
+            console.log("Spojení navázáno.");
+        } else {
+            status.style.display = "block";
+            status.innerText = "⚠️ ZTRÁTA SPOJENÍ S DATABÁZÍ (Zkontrolujte internet)";
+        }
+    });
+
+    // 1. NAČÍTÁNÍ PRODUKTŮ
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
         const div = document.getElementById("produkty-seznam");
         div.innerHTML = "";
         
         const nazvy = Object.keys(data).sort();
-        
+        if(nazvy.length === 0) {
+            div.innerHTML = "<p style='color:#aaa; text-align:center;'>Žádné listy. Přidejte zboží vpravo.</p>";
+        }
+
         nazvy.forEach(nazev => {
             div.innerHTML += `
                 <div class="polozka-box">
-                    <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="polozka-listu">
-                        ${nazev}
-                    </a>
-                    <button class="btn-smazat-produkt" onclick="smazatProdukt('${nazev}')" title="Smazat celý list">
-                        ✕
-                    </button>
+                    <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="polozka-listu">${nazev}</a>
+                    <button class="btn-smazat-produkt" onclick="smazatProdukt('${nazev}')">✕</button>
                 </div>`;
         });
-        
-        if(nazvy.length === 0) div.innerHTML = '<p style="color:#aaa; text-align:center;">Žádné aktivní listy.</p>';
+    }, (error) => {
+        document.getElementById("produkty-seznam").innerHTML = "<p style='color:red'>Chyba oprávnění: " + error.message + "</p>";
     });
-
-    // Funkce pro smazání celého listu (produktu)
-    function smazatProdukt(nazev) {
-        if (confirm(`OPRAVDU SMAZAT LIST "${nazev}"?\n\nSmaže se cena z e-shopu i veškeré objednávky v tomto listu.`)) {
-            // Smaže produkt z nabídky
-            db.ref("produkty/" + nazev).remove();
-            // Smaže všechny objednávky v tomto listu
-            db.ref("objednavky/" + nazev).remove();
-        }
-    }
 
     // 2. NAČÍTÁNÍ DLUHŮ
     db.ref("dluhy").on("value", (snap) => {
@@ -164,8 +160,41 @@
             
             tabulka.innerHTML += `
                 <tr>
-                    <td class="dluh-jmeno">${d.jmeno}</td>
-                    <td><small style="color:#666">${d.zbozi || 'Uzeniny'}</small></td>
+                    <td><strong>${d.jmeno}</strong></td>
+                    <td><small>${d.zbozi || 'Uzeniny'}</small></td>
                     <td class="dluh-castka">${d.castka} Kč</td>
                     <td style="text-align:right">
-                        <button class="btn-zaplaceno" onclick="db.ref('dl
+                        <button class="btn-zaplaceno" onclick="db.ref('dluhy/${id}').remove()">ZAPLACENO</button>
+                    </td>
+                </tr>`;
+        }
+
+        if (counter > 0) {
+            sumaBox.style.display = "block";
+            sumaTxt.innerText = "CELKEM CHYBÍ: " + suma + " Kč";
+        } else {
+            sumaBox.style.display = "none";
+            tabulka.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:green;">Žádné dluhy ✅</td></tr>';
+        }
+    });
+
+    function smazatProdukt(nazev) {
+        if (confirm(`Smazat list "${nazev}"?`)) {
+            db.ref("produkty/" + nazev).remove();
+            db.ref("objednavky/" + nazev).remove();
+        }
+    }
+
+    function vytvoritProdukt() {
+        const n = document.getElementById("novy-nazev").value.trim();
+        const c = document.getElementById("nova-cena").value.trim();
+        if (n && c) {
+            db.ref("produkty/" + n).set(parseInt(c)).then(() => {
+                document.getElementById("novy-nazev").value = "";
+                document.getElementById("nova-cena").value = "";
+            });
+        }
+    }
+</script>
+</body>
+</html>
