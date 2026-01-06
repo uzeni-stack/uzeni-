@@ -3,143 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Správa zboží</title>
+    <title>Admin - Správa</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
-        
-        /* LEVÝ PANEL */
-        .sidebar { 
-            width: 260px; 
-            background: #263238; 
-            color: white; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            overflow-y: auto;
-            border-right: 1px solid #000;
-        }
-        .sidebar h2 { font-size: 0.8em; color: #90a4ae; text-transform: uppercase; letter-spacing: 1px; }
-        
-        #sidebar-produkty { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
-
-        .btn-polozka { 
-            background: #37474f; 
-            color: #fff; 
-            text-decoration: none; 
-            padding: 15px; 
-            border-radius: 8px; 
-            font-weight: bold;
-            display: block;
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: 0.2s;
-        }
-        .btn-polozka:hover { background: #1976d2; transform: translateX(5px); }
-        .btn-polozka span { display: block; font-size: 0.7em; color: #90a4ae; margin-top: 4px; }
-
-        /* HLAVNÍ PLOCHA */
-        .hlavni-obsah { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
-        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 1em; outline: none; }
-        input:focus { border-color: #1976d2; }
-        
-        .btn-add { background: #2e7d32; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em; margin-top: 10px; }
-        .btn-add:active { transform: scale(0.98); }
+        .sidebar { width: 260px; background: #263238; color: white; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar h2 { font-size: 0.8em; color: #90a4ae; text-transform: uppercase; margin-bottom: 20px; border-bottom: 1px solid #37474f; padding-bottom: 10px; }
+        .btn-polozka { background: #37474f; color: white; text-decoration: none; padding: 15px; border-radius: 8px; font-weight: bold; margin-bottom: 10px; display: block; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-polozka:hover { background: #1976d2; }
+        .btn-polozka span { display: block; font-size: 0.7em; opacity: 0.6; }
+        .hlavni { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; }
+        .btn-add { background: #2e7d32; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-
     <div class="sidebar">
-        <h2>📦 AKTIVNÍ SORTIMENT</h2>
-        <div id="sidebar-produkty">
-            <p style="font-size: 0.8em; color: #666;">Načítám zboží...</p>
-        </div>
+        <h2>📦 TVÉ LISTY ZBOŽÍ</h2>
+        <div id="sidebar-produkty"></div>
     </div>
-
-    <div class="hlavni-obsah">
+    <div class="hlavni">
         <div class="box">
-            <h1 style="margin:0 0 20px 0; font-size: 1.4em; color: #1976d2;">Vytvořit nové zboží</h1>
-            
-            <label style="font-size: 0.8em; font-weight: bold; color: #555;">NÁZEV PRODUKTU</label>
-            <input type="text" id="nazev" placeholder="např. Šunka od kosti">
-            
-            <label style="font-size: 0.8em; font-weight: bold; color: #555;">CENA (za 1 kg)</label>
-            <input type="number" id="cena" placeholder="Kč">
-            
-            <button class="btn-add" onclick="pridatZbozi()">ULOŽIT A VYTVOŘIT TLAČÍTKO</button>
+            <h1 style="margin:0 0 20px 0; font-size: 1.4em;">Vytvořit nové zboží</h1>
+            <input type="text" id="nazev" placeholder="Název (např. Klobása)">
+            <input type="number" id="cena" placeholder="Cena za kg">
+            <button class="btn-add" onclick="pridat()">ULOŽIT</button>
         </div>
-
-        <p style="margin-top: 30px; font-size: 0.9em; color: #888;">
-            Tip: Kliknutím na tlačítko vlevo přejdeš k vážení daného masa.
-        </p>
     </div>
-
 <script>
-    // --- KONFIGURACE FIREBASE ---
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- NAČÍTÁNÍ TLAČÍTEK DO SIDEBARU ---
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
         const sidebar = document.getElementById("sidebar-produkty");
-        sidebar.innerHTML = ""; // Vyčistit
-
-        const produktyKlice = Object.keys(data).sort();
-
-        if (produktyKlice.length === 0) {
-            sidebar.innerHTML = '<p style="font-size: 0.8em; color: #555;">Zatím žádné zboží.</p>';
-        }
-
-        produktyKlice.forEach(nazev => {
+        sidebar.innerHTML = "";
+        Object.keys(data).sort().forEach(nazev => {
             const cena = data[nazev];
-            
-            // Vytvoření elementu tlačítka (odkazu)
-            const odkaz = document.createElement("a");
-            odkaz.href = `rozpis.html?filtr=${encodeURIComponent(nazev)}`;
-            odkaz.className = "btn-polozka";
-            odkaz.innerHTML = `
-                ${nazev.toUpperCase()}
-                <span>Cena: ${cena} Kč/kg</span>
-            `;
-            
-            // Smazání produktu pravým tlačítkem (pro jistotu)
-            odkaz.oncontextmenu = (e) => {
-                e.preventDefault();
-                if(confirm("Odstranit " + nazev + " z nabídky?")) {
-                    db.ref("produkty/" + nazev).remove();
-                }
-            };
-
-            sidebar.appendChild(odkaz);
+            sidebar.innerHTML += `
+                <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="btn-polozka">
+                    ${nazev.toUpperCase()}
+                    <span>Cena: ${cena} Kč/kg</span>
+                </a>`;
         });
     });
 
-    // --- FUNKCE PŘIDÁNÍ ---
-    function pridatZbozi() {
-        const nazevInput = document.getElementById("nazev");
-        const cenaInput = document.getElementById("cena");
-        
-        const nazev = nazevInput.value.trim();
-        const cena = cenaInput.value.trim();
-
-        if (nazev && cena) {
-            // Uložíme do Firebase pod uzel "produkty"
-            db.ref("produkty/" + nazev).set(parseInt(cena))
-                .then(() => {
-                    nazevInput.value = "";
-                    cenaInput.value = "";
-                    console.log("Uloženo úspěšně");
-                })
-                .catch((error) => alert("Chyba: " + error.message));
-        } else {
-            alert("Musíš vyplnit obě pole!");
+    function pridat() {
+        const n = document.getElementById("nazev").value.trim();
+        const c = document.getElementById("cena").value.trim();
+        if (n && c) {
+            db.ref("produkty/" + n).set(parseInt(c)).then(() => {
+                document.getElementById("nazev").value = "";
+                document.getElementById("cena").value = "";
+            });
         }
     }
 </script>
-
 </body>
 </html>
