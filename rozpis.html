@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vážení a Dluhy</title>
+    <title>Vážení a Dluhy - Funkční</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -15,13 +15,12 @@
         th { background: #eee; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 0.85em; }
         td { padding: 12px 10px; border-bottom: 1px solid #eee; }
 
-        .vstup { width: 75px; padding: 8px; border: 2px solid #1976d2; border-radius: 6px; font-weight: bold; text-align: center; }
-        .vstup-zaplatil { border-color: #2e7d32; }
-        .cena-dluh { font-weight: 900; color: #d32f2f; font-size: 1.2em; }
+        .vstup { width: 80px; padding: 10px; border: 2px solid #1976d2; border-radius: 6px; font-weight: bold; text-align: center; font-size: 1.1em; }
+        .vstup-zaplatil { border-color: #2e7d32; color: #2e7d32; }
+        .cena-dluh { font-weight: 900; color: #d32f2f; font-size: 1.3em; }
         
         .btn-hotovo { background: #2e7d32; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
         
-        /* Sekce pro dluhy */
         .dluhy-box { background: #ffebee; border: 2px solid #c62828; border-radius: 8px; padding: 15px; }
         .dluhy-titulek { color: #c62828; margin-top: 0; border-bottom: 1px solid #c62828; padding-bottom: 5px; }
         .dluh-polozka { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #c62828; color: #b71c1c; font-weight: bold; }
@@ -35,7 +34,7 @@
         <a href="admin.html" style="color:white; text-decoration:none; font-weight:bold;">ZPĚT</a>
     </div>
 
-    <table>
+    <table id="hlavni-tabulka">
         <thead>
             <tr>
                 <th>ZÁKAZNÍK / ZBOŽÍ</th>
@@ -50,7 +49,7 @@
 
     <div class="dluhy-box">
         <h3 class="dluhy-titulek">🛑 SEZNAM DLUŽNÍKŮ</h3>
-        <div id="seznam-dluhu">Žádní dlužníci (všichni zaplatili).</div>
+        <div id="seznam-dluhu">Načítám dluhy...</div>
     </div>
 </div>
 
@@ -60,10 +59,16 @@
     const db = firebase.database();
 
     let cenik = {};
+    let prvniNacteni = true;
+
+    // Načtení ceníku
     db.ref("produkty").on("value", (s) => { cenik = s.val() || {}; });
 
-    // Načítání objednávek k vážení
+    // Načítání objednávek - "once" pro stabilitu při psaní, nebo "on" s kontrolou focusu
     db.ref("objednavky").on("value", (snap) => {
+        // Pokud právě uživatel píše do nějakého pole, nepřekreslovat tabulku (aby mu nezmizela klávesnice)
+        if (document.activeElement.tagName === "INPUT") return;
+        
         const data = snap.val() || {};
         const tbody = document.getElementById("seznam");
         tbody.innerHTML = "";
@@ -78,16 +83,17 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td><b>${obj.zakaznik}</b><br><small>${obj.produkty}</small></td>
-                <td><input type="number" class="vstup" value="${gramy || ''}" oninput="aktualizovat('${id}', 'skutecna_vaha_gr', this.value)"></td>
-                <td class="cena-dluh">${kPlatbe} Kč</td>
-                <td><input type="number" class="vstup vstup-zaplatil" value="${zaplaceno || ''}" oninput="aktualizovat('${id}', 'zaplaceno', this.value)"></td>
+                <td><input type="number" class="vstup" value="${gramy || ''}" onchange="aktualizovat('${id}', 'skutecna_vaha_gr', this.value)"></td>
+                <td class="cena-dluh" id="cena-${id}">${kPlatbe} Kč</td>
+                <td><input type="number" class="vstup vstup-zaplatil" value="${zaplaceno || ''}" onchange="aktualizovat('${id}', 'zaplaceno', this.value)"></td>
                 <td><button class="btn-hotovo" onclick="hotovo('${id}', '${obj.zakaznik}', '${obj.produkty}', ${kPlatbe}, ${zaplaceno})">HOTOVO</button></td>
             `;
             tbody.appendChild(tr);
         }
+        if (Object.keys(data).length === 0) tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>Vše hotovo.</td></tr>";
     });
 
-    // Načítání seznamu dlužníků
+    // Načítání dluhů
     db.ref("dluhy").on("value", (snap) => {
         const dluhy = snap.val() || {};
         const div = document.getElementById("seznam-dluhu");
@@ -97,30 +103,29 @@
             div.innerHTML += `
                 <div class="dluh-polozka">
                     <span>${d.jmeno} (${d.zbozi})</span>
-                    <span>DLUŽÍ: ${d.castka} Kč 
-                        <button onclick="smazatDluh('${id}')" style="margin-left:10px; cursor:pointer;">Smazáno</button>
-                    </span>
+                    <span>DLUŽÍ: ${d.castka} Kč <button onclick="smazatDluh('${id}')">Smazáno</button></span>
                 </div>`;
         }
-        if (Object.keys(dluhy).length === 0) div.innerHTML = "Všichni mají zaplaceno.";
+        if (Object.keys(dluhy).length === 0) div.innerHTML = "Všichni zaplatili.";
     });
 
     function aktualizovat(id, pole, hodnota) {
-        let u = {}; u[pole] = parseInt(hodnota) || 0;
-        db.ref("objednavky/" + id).update(u);
+        let val = parseInt(hodnota) || 0;
+        db.ref("objednavky/" + id).update({ [pole]: val });
+        // Počkat chvíli a pak nechat tabulku, ať se sama aktualizuje
     }
 
     function hotovo(id, jm, zb, kPlatbe, zapl) {
-        const rozdil = kPlatbe - zapl;
-        if (rozdil > 0) {
-            if (confirm(`Zákazník dluží ${rozdil} Kč. Zapsat do seznamu dlužníků?`)) {
-                db.ref("dluhy").push({ jmeno: jm, zbozi: zb, castka: rozdil, datum: new Date().toLocaleDateString() });
+        const doplata = kPlatbe - zapl;
+        if (doplata > 0) {
+            if (confirm(`Zákazník dluží ${doplata} Kč. Zapsat ho do seznamu dluhů?`)) {
+                db.ref("dluhy").push({ jmeno: jm, zbozi: zb, castka: doplata });
             }
         }
         db.ref("objednavky/" + id).remove();
     }
 
-    function smazatDluh(id) { if(confirm("Smazat tento dluh?")) db.ref("dluhy/" + id).remove(); }
+    function smazatDluh(id) { if(confirm("Dluh zaplacen?")) db.ref("dluhy/" + id).remove(); }
 </script>
 
 </body>
