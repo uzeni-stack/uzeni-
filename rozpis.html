@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokladna Boos - Živý výpočet</title>
+    <title>Pokladna Boos - Statistiky</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; }
         .container { max-width: 1000px; margin: auto; }
-        .sumar-box { background: #e8f5e9; border: 3px solid #2e7d32; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
-        .zbozi-sekce { background: white; margin-bottom: 20px; border-radius: 12px; border: 1px solid #1976d2; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .sumar-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
+        .stats-box { background: #eceff1; border: 2px solid #455a64; border-radius: 15px; padding: 15px; margin-top: 50px; }
+        .zbozi-sekce { background: white; margin-bottom: 20px; border-radius: 12px; border: 1px solid #1976d2; overflow: hidden; }
         .zbozi-hlavicka { background: #1976d2; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #e3f2fd; text-align: left; padding: 10px; font-size: 12px; }
-        td { padding: 10px; border-bottom: 1px solid #eee; }
-        .input-vaha { width: 70px; padding: 8px; border: 1px solid #1976d2; border-radius: 5px; font-weight: bold; }
-        .input-penize { width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
-        .cena-display { font-weight: bold; color: #1976d2; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        td, th { padding: 10px; border-bottom: 1px solid #eee; }
+        .input-vaha { width: 70px; padding: 8px; border: 1px solid #1976d2; border-radius: 5px; }
         .btn-save { background: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .dluh { color: red; font-weight: bold; }
+        .btn-reset { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; float: right; }
     </style>
 </head>
 <body>
@@ -27,7 +25,14 @@
 <div class="container">
     <h2 style="text-align:center;">📊 POKLADNA A VÁŽENÍ</h2>
 
-    <div id="vypis-sumar-root"></div> <div id="vypis-zbozi">Načítám...</div>
+    <div id="vypis-sumar-root"></div>
+    <div id="vypis-zbozi">Načítám...</div>
+
+    <div class="stats-box">
+        <button class="btn-reset" onclick="resetStats()">VYMAZAT STATISTIKU (KONEC ROKU)</button>
+        <h3 style="margin-top:0; color:#37474f;">📈 CELKOVĚ PRODÁNO ZA ROK (V GRAMECH)</h3>
+        <div id="vypis-statistiky">Zatím žádná data...</div>
+    </div>
 </div>
 
 <script>
@@ -38,78 +43,95 @@
 
     db.ref("produkty").on("value", (snap) => {
         cenyZbozi = snap.val() || {};
-        nactiVse();
+        nactiData();
+        nactiStatistiky();
     });
 
-    function nactiVse() {
+    function nactiData() {
         db.ref("objednavky").on("value", (snap) => {
             const data = snap.val();
-            if (!data) return;
-
             const divZbozi = document.getElementById("vypis-zbozi");
             const divSumarRoot = document.getElementById("vypis-sumar-root");
+            if (!data) { divZbozi.innerHTML = "Žádné aktivní objednávky."; divSumarRoot.innerHTML = ""; return; }
             
             divZbozi.innerHTML = "";
-            let poJmenech = {};
-            let poZbozi = {};
+            let poJmenech = {}; let poZbozi = {};
 
             for (let id in data) {
                 let o = data[id]; o.id = id;
                 if (!poJmenech[o.zakaznik]) poJmenech[o.zakaznik] = { cena: 0, zaplaceno: 0 };
                 poJmenech[o.zakaznik].cena += (o.skutecna_cena || 0);
                 poJmenech[o.zakaznik].zaplaceno += (o.zaplaceno || 0);
-
                 if (!poZbozi[o.produkty]) poZbozi[o.produkty] = [];
                 poZbozi[o.produkty].push(o);
             }
 
-            // VYKRESLENÍ SUMÁŘE
-            let sumarHtml = `<div class="sumar-box"><h3>💰 CELKEM K PLATBĚ</h3><table style="width:100%; background:white; border-radius:8px;">
-                <tr style="text-align:left;"><th>Zákazník</th><th>Celkem Cena</th><th>Zaplaceno</th><th>Zbývá</th></tr>`;
+            // VYKRESLENÍ SUMÁŘE K PLATBĚ
+            let sumarHtml = `<div class="sumar-box"><h3>💰 CELKEM K PLATBĚ</h3><table style="width:100%; background:white; border-radius:8px;"><tr><th>Zákazník</th><th>Cena</th><th>Zaplaceno</th><th>Zbývá</th></tr>`;
             for (let jm in poJmenech) {
                 let zb = poJmenech[jm].cena - poJmenech[jm].zaplaceno;
-                sumarHtml += `<tr><td><b>${jm}</b></td><td>${poJmenech[jm].cena} Kč</td><td>${poJmenech[jm].zaplaceno} Kč</td><td class="${zb>0?'dluh':''}"><b>${zb} Kč</b></td></tr>`;
+                sumarHtml += `<tr><td><b>${jm}</b></td><td>${poJmenech[jm].cena} Kč</td><td>${poJmenech[jm].zaplaceno} Kč</td><td style="color:${zb>0?'red':''}"><b>${zb} Kč</b></td></tr>`;
             }
             divSumarRoot.innerHTML = sumarHtml + `</table></div>`;
 
-            // VYKRESLENÍ TABULEK ZBOŽÍ
+            // VYKRESLENÍ TABULEK PRO VÁŽENÍ
             for (let prod in poZbozi) {
                 let cenaKg = cenyZbozi[prod] || 0;
-                let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${prod}</span><span>${cenaKg} Kč/kg</span></div><table>
-                    <tr><th>Zákazník</th><th>Objednáno</th><th>Gramy (skutečnost)</th><th>Cena k úhradě</th><th>Zaplaceno</th><th>Akce</th></tr>`;
-                
+                let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${prod}</span><span>${cenaKg} Kč/kg</span></div><table>`;
                 poZbozi[prod].forEach(obj => {
-                    html += `<tr>
-                        <td><b>${obj.zakaznik}</b></td>
-                        <td>${obj.vaha} kg</td>
-                        <td><input type="number" class="input-vaha" value="${obj.skutecna_vaha_gr||''}" 
-                            oninput="zivaCena('${obj.id}', this.value, ${cenaKg})" id="gr-${obj.id}"> gr</td>
-                        <td class="cena-display" id="disp-${obj.id}">${obj.skutecna_cena || 0} Kč</td>
-                        <td><input type="number" class="input-penize" value="${obj.zaplaceno||0}" id="pay-${obj.id}"> Kč</td>
-                        <td><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg})">ULOŽIT</button></td>
-                    </tr>`;
+                    html += `<tr><td><b>${obj.zakaznik}</b></td><td>${obj.vaha} kg</td>
+                        <td><input type="number" class="input-vaha" value="${obj.skutecna_vaha_gr||''}" oninput="zivaCena('${obj.id}', this.value, ${cenaKg})" id="gr-${obj.id}"> gr</td>
+                        <td id="disp-${obj.id}"><b>${obj.skutecna_cena || 0} Kč</b></td>
+                        <td><input type="number" style="width:70px;" value="${obj.zaplaceno||0}" id="pay-${obj.id}"> Kč</td>
+                        <td><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg}, '${prod}')">ULOŽIT</button></td></tr>`;
                 });
                 divZbozi.innerHTML += html + `</table></div>`;
             }
         });
     }
 
-    // TATO FUNKCE OKAMŽITĚ POČÍTÁ CENU PŘI PSANÍ
-    function zivaCena(id, gramy, cenaKg) {
-        let vypocet = Math.round((gramy / 1000) * cenaKg);
-        document.getElementById("disp-" + id).innerText = vypocet + " Kč";
+    function nactiStatistiky() {
+        db.ref("statistiky").on("value", (snap) => {
+            const stats = snap.val();
+            const div = document.getElementById("vypis-statistiky");
+            if (!stats) { div.innerHTML = "Zatím žádné prodeje."; return; }
+            let html = "<table style='width:100%; text-align:left;'><tr><th>Zboží</th><th>Celkem prodáno</th></tr>";
+            for (let k in stats) {
+                html += `<tr><td>${k}</td><td><b>${(stats[k]/1000).toFixed(2)} kg</b> (${stats[k]} gr)</td></tr>`;
+            }
+            div.innerHTML = html + "</table>";
+        });
     }
 
-    function uloz(id, cenaKg) {
+    function uloz(id, cenaKg, nazevZbozi) {
         const gr = parseInt(document.getElementById(`gr-${id}`).value) || 0;
         const pay = parseInt(document.getElementById(`pay-${id}`).value) || 0;
         const cena = Math.round((gr / 1000) * cenaKg);
 
-        db.ref("objednavky/" + id).update({
-            skutecna_vaha_gr: gr,
-            skutecna_cena: cena,
-            zaplaceno: pay
-        }).then(() => { alert("Uloženo!"); });
+        // Zjistíme starou váhu, abychom nepřičítali dvakrát totéž při opravě
+        db.ref("objednavky/" + id).once("value").then((snap) => {
+            const staraVaha = snap.val().skutecna_vaha_gr || 0;
+            const rozdil = gr - staraVaha;
+
+            // 1. Aktualizujeme objednávku
+            db.ref("objednavky/" + id).update({ skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay });
+
+            // 2. Přičteme rozdíl do statistik (trvalé)
+            if (rozdil !== 0) {
+                db.ref("statistiky/" + nazevZbozi).transaction((current) => {
+                    return (current || 0) + rozdil;
+                });
+            }
+            alert("Uloženo a přičteno do statistiky!");
+        });
+    }
+
+    function resetStats() {
+        if (confirm("Opravdu vymazat celoroční statistiku?")) { db.ref("statistiky").remove(); }
+    }
+
+    function zivaCena(id, gramy, cenaKg) {
+        document.getElementById("disp-" + id).innerText = Math.round((gramy / 1000) * cenaKg) + " Kč";
     }
 </script>
 </body>
