@@ -10,23 +10,21 @@
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
         .container { max-width: 600px; margin: auto; }
         
-        /* Horní navigace pro tebe */
         .admin-nav { background: #333; padding: 10px; text-align: center; border-radius: 10px; margin-bottom: 15px; }
         .admin-nav a { color: white; margin: 0 15px; text-decoration: none; font-weight: bold; font-size: 0.9em; }
 
-        /* Tvůj klasický styl sekce */
         .zbozi-sekce { background: white; margin-bottom: 20px; border-radius: 12px; border: 1px solid #1976d2; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .zbozi-hlavicka { background: #1976d2; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         
         table { width: 100%; border-collapse: collapse; background: white; }
         td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         
-        /* Košík - tvůj Sumář box styl */
         .kosik-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 15px; padding: 15px; margin-top: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         
         .input-text { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #1976d2; border-radius: 5px; box-sizing: border-box; font-size: 1em; }
-        .btn-add { background: #1976d2; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-send { background: #2e7d32; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1em; }
+        .btn-add { background: #1976d2; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 5px; }
+        .btn-remove { background: #f44336; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-send { background: #2e7d32; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1em; margin-top: 10px; }
         
         .setup-box { background: #cfd8dc; border: 2px solid #455a64; border-radius: 15px; padding: 15px; margin-top: 40px; font-size: 0.9em; }
     </style>
@@ -48,20 +46,22 @@
         </table>
     </div>
 
-    <div class="kosik-box">
+    <div class="kosik-box" id="kosik-sekce">
         <h3 style="margin-top:0; color:#2e7d32;">🛍️ VÁŠ KOŠÍK</h3>
-        <div id="obsah-kosiku" style="margin-bottom: 15px;">Košík je prázdný</div>
+        <div id="obsah-kosiku">Košík je prázdný. Klikněte na tlačítko "Přidat" u zboží.</div>
         
-        <input type="text" id="zakaznik-jmeno" class="input-text" placeholder="Zadejte Vaše jméno">
-        <button class="btn-send" onclick="odeslatObjednavku()">POTVRDIT A ODESLAT</button>
+        <div id="formular-odeslani" style="display:none; margin-top:15px; border-top:1px solid #2e7d32; padding-top:10px;">
+            <input type="text" id="zakaznik-jmeno" class="input-text" placeholder="Vaše jméno a příjmení">
+            <button class="btn-send" onclick="odeslatObjednavku()">POTVRDIT A ODESLAT DO UDÍRNY</button>
+        </div>
     </div>
 
     <div class="setup-box">
-        <h3 style="margin-top:0;">⚙️ NASTAVENÍ NABÍDKY</h3>
-        <input type="text" id="admin-nazev" placeholder="Název zboží" style="width:150px; padding:5px;">
-        <input type="number" id="admin-cena" placeholder="Kč/kg" style="width:80px; padding:5px;">
+        <h3 style="margin-top:0;">⚙️ NASTAVENÍ NABÍDKY (Jen pro Boose)</h3>
+        <input type="text" id="admin-nazev" placeholder="Název zboží" style="width:130px;">
+        <input type="number" id="admin-cena" placeholder="Kč/kg" style="width:70px;">
         <button onclick="pridatProdukt()">PŘIDAT</button>
-        <div id="admin-list" style="margin-top:10px; font-style:italic;"></div>
+        <div id="admin-list" style="margin-top:10px;"></div>
     </div>
 </div>
 
@@ -70,16 +70,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let kosik = [];
+    let kosik = {}; // Použijeme objekt pro snadnější sčítání kg
 
-    // Načítání produktů
+    // Načítání produktů z DB
     db.ref("produkty").on("value", (snap) => {
         const produkty = snap.val() || {};
         const tabulka = document.getElementById("tabulka-nabidky");
         const adminList = document.getElementById("admin-list");
         
         tabulka.innerHTML = "";
-        adminList.innerHTML = "Smazat z nabídky: ";
+        adminList.innerHTML = "<b>Aktuálně nabízíte:</b><br>";
         
         for (let nazev in produkty) {
             // Tabulka pro zákazníky
@@ -87,16 +87,55 @@
             tr.innerHTML = `
                 <td><b>${nazev}</b></td>
                 <td>${produkty[nazev]} Kč</td>
-                <td style="text-align:right;"><button class="btn-add" onclick="pridatDoKosiku('${nazev}')">+ 0.5 kg</button></td>
+                <td style="text-align:right;">
+                    <button class="btn-add" onclick="upravitVahu('${nazev}', 0.5)">+ 0.5 kg</button>
+                </td>
             `;
             tabulka.appendChild(tr);
             
-            // Seznam pro smazání v adminu
-            adminList.innerHTML += `<button onclick="smazatProdukt('${nazev}')" style="margin-right:10px; cursor:pointer;">${nazev} [x]</button>`;
+            // Administrace
+            adminList.innerHTML += `${nazev} (${produkty[nazev]} Kč) <button onclick="smazatProdukt('${nazev}')" style="color:red; cursor:pointer; margin-right:15px;">[x]</button> `;
         }
     });
 
-    // Funkce Boos - Správa
+    // Funkce pro změnu váhy v košíku
+    function upravitVahu(nazev, zmena) {
+        if (!kosik[nazev]) kosik[nazev] = 0;
+        kosik[nazev] += zmena;
+        
+        if (kosik[nazev] <= 0) delete kosik[nazev];
+        
+        vykresliKosik();
+    }
+
+    // Vykreslení košíku
+    function vykresliKosik() {
+        const div = document.getElementById("obsah-kosiku");
+        const form = document.getElementById("formular-odeslani");
+        const klice = Object.keys(kosik);
+        
+        if (klice.length === 0) {
+            div.innerHTML = "Košík je prázdný. Klikněte na tlačítko '+ 0.5 kg' u zboží.";
+            form.style.display = "none";
+            return;
+        }
+        
+        form.style.display = "block";
+        let h = "<table style='background:none; width:100%;'>";
+        klice.forEach(nazev => {
+            h += `<tr>
+                    <td><b>${nazev}</b></td>
+                    <td style="text-align:center;">
+                        <button class="btn-remove" onclick="upravitVahu('${nazev}', -0.5)">-</button>
+                        <span style="margin: 0 10px; font-weight:bold;">${kosik[nazev]} kg</span>
+                        <button class="btn-add" onclick="upravitVahu('${nazev}', 0.5)">+</button>
+                    </td>
+                  </tr>`;
+        });
+        div.innerHTML = h + "</table>";
+    }
+
+    // Funkce Boos - Přidání nového produktu do nabídky
     function pridatProdukt() {
         const n = document.getElementById("admin-nazev").value;
         const p = document.getElementById("admin-cena").value;
@@ -104,51 +143,35 @@
             db.ref("produkty/" + n).set(parseInt(p));
             document.getElementById("admin-nazev").value = "";
             document.getElementById("admin-cena").value = "";
-        }
+        } else { alert("Vyplň název i cenu!"); }
     }
 
     function smazatProdukt(n) {
         if(confirm("Odstranit " + n + " z nabídky?")) db.ref("produkty/" + n).remove();
     }
 
-    // Funkce Košík
-    function pridatDoKosiku(nazev) {
-        let index = kosik.findIndex(item => item.nazev === nazev);
-        if (index > -1) { kosik[index].vaha += 0.5; } 
-        else { kosik.push({ nazev: nazev, vaha: 0.5 }); }
-        vykresliKosik();
-    }
-
-    function vykresliKosik() {
-        const div = document.getElementById("obsah-kosiku");
-        if (kosik.length === 0) { div.innerHTML = "Košík je prázdný"; return; }
-        
-        let h = "<table style='background:none;'>";
-        kosik.forEach((item, i) => {
-            h += `<tr><td>${item.nazev}</td><td><b>${item.vaha} kg</b></td>
-                  <td style="text-align:right;"><button onclick="odebrat(${i})" style="color:red; background:none; border:none; cursor:pointer;">zrušit</button></td></tr>`;
-        });
-        div.innerHTML = h + "</table>";
-    }
-
-    function odebrat(i) {
-        kosik.splice(i, 1);
-        vykresliKosik();
-    }
-
+    // Odeslání objednávky
     function odeslatObjednavku() {
         const jmeno = document.getElementById("zakaznik-jmeno").value;
-        if (!jmeno || kosik.length === 0) { alert("Zadejte jméno a vyberte zboží!"); return; }
+        if (!jmeno) { alert("Zadejte prosím Vaše jméno!"); return; }
 
-        kosik.forEach(polozka => {
+        const klice = Object.keys(kosik);
+        klice.forEach(nazev => {
             db.ref("objednavky").push({
-                zakaznik: jmeno, produkty: polozka.nazev, vaha: polozka.vaha,
-                skutecna_vaha_gr: 0, skutecna_cena: 0, zaplaceno: 0
+                zakaznik: jmeno,
+                produkty: nazev,
+                vaha: kosik[nazev],
+                skutecna_vaha_gr: 0,
+                skutecna_cena: 0,
+                zaplaceno: 0,
+                datum: new Date().toLocaleDateString()
             });
         });
 
-        alert("Děkujeme! Objednávka odeslána.");
-        kosik = []; document.getElementById("zakaznik-jmeno").value = ""; vykresliKosik();
+        alert("Děkujeme! Vaše objednávka byla odeslána k udírně.");
+        kosik = {};
+        document.getElementById("zakaznik-jmeno").value = "";
+        vykresliKosik();
     }
 </script>
 </body>
