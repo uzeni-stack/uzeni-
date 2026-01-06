@@ -3,54 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Správa</title>
+    <title>Admin - Správa e-shopu</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
+        :root { --primary: #263238; --accent: #d32f2f; --success: #2e7d32; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
-        .sidebar { width: 260px; background: #263238; color: white; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
-        .sidebar h2 { font-size: 0.8em; color: #90a4ae; text-transform: uppercase; margin-bottom: 20px; border-bottom: 1px solid #37474f; padding-bottom: 10px; }
-        .btn-polozka { background: #37474f; color: white; text-decoration: none; padding: 15px; border-radius: 8px; font-weight: bold; margin-bottom: 10px; display: block; border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Levý panel - Seznam listů */
+        .sidebar { width: 280px; background: var(--primary); color: white; padding: 20px; overflow-y: auto; }
+        .sidebar h2 { font-size: 0.8em; color: #90a4ae; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; border-bottom: 1px solid #37474f; padding-bottom: 10px; }
+        .btn-polozka { background: #37474f; color: white; text-decoration: none; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: block; transition: 0.3s; border: 1px solid rgba(255,255,255,0.05); }
         .btn-polozka:hover { background: #1976d2; }
-        .btn-polozka span { display: block; font-size: 0.7em; opacity: 0.6; }
-        .hlavni { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
-        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; }
-        .btn-add { background: #2e7d32; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-polozka b { display: block; font-size: 1.1em; }
+        .btn-polozka span { font-size: 0.8em; opacity: 0.7; }
+
+        /* Hlavní plocha */
+        .hlavni { flex: 1; padding: 30px; overflow-y: auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+
+        .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .box h3 { margin-top: 0; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-bottom: 20px; }
+
+        /* Formulář */
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        .btn-add { background: var(--success); color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; }
+
+        /* Tabulka dluhů */
+        .dluhy-list { width: 100%; border-collapse: collapse; }
+        .dluhy-list th { text-align: left; font-size: 0.8em; color: #888; text-transform: uppercase; padding: 10px; }
+        .dluhy-list td { padding: 12px 10px; border-bottom: 1px solid #f9f9f9; }
+        .dluh-jmeno { font-weight: bold; }
+        .dluh-castka { color: var(--accent); font-weight: bold; text-align: right; }
+        .btn-smazat-dluh { background: none; border: 1px solid #ddd; color: #888; cursor: pointer; border-radius: 4px; padding: 4px 8px; font-size: 0.8em; }
+        .btn-smazat-dluh:hover { background: var(--success); color: white; border-color: var(--success); }
+        .suma-dluhu { text-align: right; font-size: 1.2em; font-weight: bold; color: var(--accent); margin-top: 15px; }
     </style>
 </head>
 <body>
+
     <div class="sidebar">
         <h2>📦 TVÉ LISTY ZBOŽÍ</h2>
         <div id="sidebar-produkty"></div>
     </div>
+
     <div class="hlavni">
-        <div class="box">
-            <h1 style="margin:0 0 20px 0; font-size: 1.4em;">Vytvořit nové zboží</h1>
-            <input type="text" id="nazev" placeholder="Název (např. Klobása)">
-            <input type="number" id="cena" placeholder="Cena za kg">
-            <button class="btn-add" onclick="pridat()">ULOŽIT</button>
+        <div class="grid">
+            <div class="box">
+                <h3>Vytvořit nové zboží</h3>
+                <input type="text" id="nazev" placeholder="Název zboží (např. Bůček)">
+                <input type="number" id="cena" placeholder="Cena za kg (Kč)">
+                <button class="btn-add" onclick="pridat()">ULOŽIT ZBOŽÍ</button>
+            </div>
+
+            <div class="box" style="border-top: 5px solid var(--accent);">
+                <h3>🔴 SEZNAM DLUŽNÍKŮ</h3>
+                <table class="dluhy-list">
+                    <thead>
+                        <tr>
+                            <th>Jméno</th>
+                            <th>Zboží</th>
+                            <th style="text-align:right">Dluží</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="seznam-dluhu">
+                        </tbody>
+                </table>
+                <div id="celkova-suma" class="suma-dluhu"></div>
+            </div>
         </div>
     </div>
+
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // 1. Načítání produktů do bočního panelu
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
         const sidebar = document.getElementById("sidebar-produkty");
         sidebar.innerHTML = "";
         Object.keys(data).sort().forEach(nazev => {
-            const cena = data[nazev];
             sidebar.innerHTML += `
                 <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="btn-polozka">
-                    ${nazev.toUpperCase()}
-                    <span>Cena: ${cena} Kč/kg</span>
+                    <b>${nazev}</b>
+                    <span>Cena: ${data[nazev]} Kč/kg</span>
                 </a>`;
         });
     });
 
+    // 2. Načítání DLUHŮ přímo do adminu
+    db.ref("dluhy").on("value", (snap) => {
+        const data = snap.val() || {};
+        const tabulka = document.getElementById("seznam-dluhu");
+        const sumaDiv = document.getElementById("celkova-suma");
+        tabulka.innerHTML = "";
+        
+        let celkem = 0;
+
+        for (let id in data) {
+            const d = data[id];
+            celkem += d.castka;
+            tabulka.innerHTML += `
+                <tr>
+                    <td class="dluh-jmeno">${d.jmeno}</td>
+                    <td><small>${d.zbozi}</small></td>
+                    <td class="dluh-castka">${d.castka} Kč</td>
+                    <td style="text-align:right">
+                        <button class="btn-smazat-dluh" onclick="smazatDluh('${id}')">ZAPLACENO</button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        if (celkem > 0) {
+            sumaDiv.innerText = "CELKEM DLUŽÍ: " + celkem + " Kč";
+        } else {
+            tabulka.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:#aaa;'>Nikdo nic nedluží 🥳</td></tr>";
+            sumaDiv.innerText = "";
+        }
+    });
+
+    // Funkce pro smazání dluhu
+    function smazatDluh(id) {
+        if(confirm("Potvrdit, že zákazník zaplatil?")) {
+            db.ref("dluhy/" + id).remove();
+        }
+    }
+
+    // Funkce pro přidání zboží
     function pridat() {
         const n = document.getElementById("nazev").value.trim();
         const c = document.getElementById("cena").value.trim();
