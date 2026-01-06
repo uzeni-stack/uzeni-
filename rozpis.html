@@ -3,71 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOOS - KOMPLETNÍ SYSTÉM</title>
+    <title>Pokladna Boos - Ekonomika</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 15px; line-height: 1.5; }
-        .section { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #ddd; }
-        
-        /* Barvy sekcí */
-        .blue-box { border-left: 8px solid #00acc1; background: #e0f7fa; } /* Ekonomika */
-        .red-box { border-left: 8px solid #d32f2f; background: #ffebee; }  /* Dlužníci */
-        .green-box { border-left: 8px solid #2e7d32; background: #e8f5e9; } /* Sumář */
-        .main-box { border-top: 5px solid #1976d2; } /* Vážení */
-
-        h3 { margin-top: 0; display: flex; justify-content: space-between; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; font-size: 12px; text-transform: uppercase; }
-
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .input-vaha { width: 80px; font-weight: bold; border-color: #1976d2; }
-        .input-pay { width: 80px; font-weight: bold; background: #fffde7; }
-        
-        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-save { background: #2e7d32; color: white; }
-        .btn-cost { background: #455a64; color: white; }
-        
-        .val-red { color: #d32f2f; font-weight: bold; }
-        .val-green { color: #2e7d32; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
+        .container { max-width: 1000px; margin: auto; }
+        .sumar-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 15px; padding: 15px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .zbozi-sekce { background: white; margin-bottom: 20px; border-radius: 12px; border: 1px solid #1976d2; overflow: hidden; }
+        .zbozi-hlavicka { background: #1976d2; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        .stats-box { background: #cfd8dc; border: 2px solid #455a64; border-radius: 15px; padding: 15px; margin-top: 40px; }
+        .ekonomika-box { background: #e0f7fa; border: 2px solid #00acc1; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        td, th { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+        .input-vaha { width: 70px; padding: 8px; border: 1px solid #1976d2; border-radius: 5px; font-weight: bold; }
+        .btn-save { background: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .dluh { color: red; font-weight: bold; }
+        .zisk-kladny { color: #2e7d32; font-weight: bold; font-size: 1.2em; }
+        .zisk-zaporny { color: #d32f2f; font-weight: bold; font-size: 1.2em; }
     </style>
 </head>
 <body>
 
-    <div class="section blue-box">
-        <h3>💰 EKONOMIKA A NÁKLADY</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-            <div>TRŽBY: <span id="stat-trzby" class="val-green">0 Kč</span></div>
-            <div>NÁKLADY: <span id="stat-naklady" class="val-red">0 Kč</span></div>
-            <div>ZISK: <span id="stat-zisk" style="font-size:1.2em; font-weight:bold;">0 Kč</span></div>
+<div class="container">
+    <h2 style="text-align:center;">📊 POKLADNA A VÁŽENÍ</h2>
+
+    <div class="ekonomika-box">
+        <h3 style="margin-top:0; color:#006064;">💰 EKONOMIKA ROKU</h3>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <div>Tržby celkem: <span id="stat-trzby" style="font-weight:bold; color:green;">0 Kč</span></div>
+            <div>Náklady celkem: <span id="stat-naklady" style="font-weight:bold; color:red;">0 Kč</span></div>
+            <div>Čistý zisk: <span id="stat-zisk">0 Kč</span></div>
         </div>
-        <div style="margin-top:15px; border-top: 1px solid #b2ebf2; padding-top:10px;">
-            <input type="number" id="novy-naklad" placeholder="Částka nákladu">
-            <button class="btn btn-cost" onclick="pridejNaklad()">PŘIDAT VÝDAJ</button>
+        <hr style="border: 0; border-top: 1px solid #b2ebf2; margin: 15px 0;">
+        <div>
+            <input type="number" id="novy-naklad" placeholder="Částka nákladu (Kč)" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            <button onclick="pridejNaklad()" style="padding: 8px 15px; background: #00acc1; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PŘIDAT VÝDAJ</button>
         </div>
     </div>
 
-    <div id="box-dluznici" class="section red-box" style="display:none;">
-        <h3 class="val-red">⚠️ SEZNAM DLUŽNÍKŮ</h3>
-        <div id="seznam-dluhy"></div>
-    </div>
+    <div id="vypis-sumar-root"></div>
 
-    <div id="box-sumar" class="section green-box">
-        <h3>👥 CELKEM K PLATBĚ PODLE JMÉN</h3>
-        <table id="tab-sumar">
-            <thead><tr><th>Zákazník</th><th>Položek</th><th>Cena celkem</th><th>Zaplaceno</th><th>Zbývá</th></tr></thead>
-            <tbody id="vystup-sumar"></tbody>
-        </table>
-    </div>
+    <div id="vypis-zbozi">Načítám objednávky...</div>
 
-    <div id="vystup-zbozi"></div>
-
-    <div class="section" style="background:#f5f5f5;">
-        <h3>📈 CELKEM PRODÁNO (KILOGRAMY)</h3>
-        <div id="vystup-vahy"></div>
-        <button onclick="resetStats()" style="color:red; background:none; border:none; cursor:pointer; font-size:11px; margin-top:10px;">Vynulovat statistiky (konec roku)</button>
+    <div class="stats-box">
+        <h3 style="margin-top:0;">📈 CELKEM PRODÁNO (KILOGRAMY)</h3>
+        <div id="vypis-statistiky">Zatím prázdno...</div>
+        <button onclick="resetStats()" style="margin-top:20px; color:red; cursor:pointer; background:none; border:1px solid red; padding:5px; border-radius:5px;">Resetovat vše (konec roku)</button>
     </div>
+</div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -78,116 +62,126 @@
     db.ref("produkty").on("value", (snap) => {
         cenyZbozi = snap.val() || {};
         nactiData();
+        nactiStatistiky();
     });
 
     function nactiData() {
-        // Načtení statistik
-        db.ref("statistiky").on("value", (snap) => {
-            const s = snap.val() || {};
-            const trzby = s.celkove_trzby || 0;
-            const naklady = s.celkove_naklady || 0;
-            document.getElementById("stat-trzby").innerText = trzby + " Kč";
-            document.getElementById("stat-naklady").innerText = naklady + " Kč";
-            document.getElementById("stat-zisk").innerText = (trzby - naklady) + " Kč";
-            
-            let vHtml = "<ul>";
-            for (let k in s.vahy) { vHtml += `<li>${k}: <b>${(s.vahy[k]/1000).toFixed(2)} kg</b></li>`; }
-            document.getElementById("vystup-vahy").innerHTML = vHtml + "</ul>";
-        });
-
-        // Načtení objednávek
         db.ref("objednavky").on("value", (snap) => {
             const data = snap.val();
-            const divZbozi = document.getElementById("vystup-zbozi");
-            const divSumar = document.getElementById("vystup-sumar");
-            const divDluhy = document.getElementById("seznam-dluhy");
-            const boxDluhy = document.getElementById("box-dluznici");
-
-            divZbozi.innerHTML = ""; divSumar.innerHTML = ""; divDluhy.innerHTML = "";
-            if (!data) return;
-
-            let poJmenech = {}; let poZbozi = {}; let dluzniciCount = 0;
+            const divZbozi = document.getElementById("vypis-zbozi");
+            const divSumarRoot = document.getElementById("vypis-sumar-root");
+            
+            if (!data) { 
+                divZbozi.innerHTML = "<p>Žádné aktivní objednávky k vážení.</p>"; 
+                divSumarRoot.innerHTML = "";
+                return; 
+            }
+            
+            divZbozi.innerHTML = "";
+            let poJmenech = {}; let poZbozi = {};
 
             for (let id in data) {
                 let o = data[id]; o.id = id;
-                let c = o.skutecna_cena || 0;
-                let z = o.zaplaceno || 0;
-
-                // Seskupení
-                if (!poJmenech[o.zakaznik]) poJmenech[o.zakaznik] = { ks:0, cena:0, zaplaceno:0 };
-                poJmenech[o.zakaznik].ks++;
-                poJmenech[o.zakaznik].cena += c;
-                poJmenech[o.zakaznik].zaplaceno += z;
-
+                if (!poJmenech[o.zakaznik]) poJmenech[o.zakaznik] = { cena: 0, zaplaceno: 0 };
+                poJmenech[o.zakaznik].cena += (o.skutecna_cena || 0);
+                poJmenech[o.zakaznik].zaplaceno += (o.zaplaceno || 0);
                 if (!poZbozi[o.produkty]) poZbozi[o.produkty] = [];
                 poZbozi[o.produkty].push(o);
-
-                // Kontrola dluhu
-                if (c > 0 && z < c) {
-                    dluzniciCount++;
-                    divDluhy.innerHTML += `<div><b>${o.zakaznik}</b> dluží <span class="val-red">${c-z} Kč</span> za ${o.produkty}</div>`;
-                }
             }
-            boxDluhy.style.display = dluzniciCount > 0 ? "block" : "none";
 
-            // Vykreslení sumáře
+            let sumarHtml = `<div class="sumar-box"><h3>💰 SUMÁŘ K PLATBĚ</h3><table><tr><th>Zákazník</th><th>Celkem Cena</th><th>Zaplaceno</th><th>Zbývá</th></tr>`;
             for (let jm in poJmenech) {
-                let p = poJmenech[jm]; let zb = p.cena - p.zaplaceno;
-                divSumar.innerHTML += `<tr><td><b>${jm}</b></td><td>${p.ks}</td><td>${p.cena} Kč</td><td>${p.zaplaceno} Kč</td><td class="${zb>0?'val-red':'val-green'}">${zb} Kč</td></tr>`;
+                let zb = poJmenech[jm].cena - poJmenech[jm].zaplaceno;
+                sumarHtml += `<tr><td><b>${jm}</b></td><td>${poJmenech[jm].cena} Kč</td><td>${poJmenech[jm].zaplaceno} Kč</td><td class="${zb>0?'dluh':''}"><b>${zb} Kč</b></td></tr>`;
             }
+            divSumarRoot.innerHTML = sumarHtml + `</table></div>`;
 
-            // Vykreslení tabulek zboží
             for (let prod in poZbozi) {
                 let cenaKg = cenyZbozi[prod] || 0;
-                let html = `<div class="section main-box"><h3>📦 ${prod} <small style="font-weight:normal; font-size:12px;">(${cenaKg} Kč/kg)</small></h3><table>
-                    <thead><tr><th>Zákazník</th><th>Váha (gr)</th><th>Cena</th><th>Zaplaceno</th><th>Akce</th></tr></thead><tbody>`;
-                
+                let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${prod}</span><span>${cenaKg} Kč/kg</span></div><table>`;
                 poZbozi[prod].forEach(obj => {
-                    html += `<tr>
-                        <td><b>${obj.zakaznik}</b><br><small>Objednáno: ${obj.vaha}kg</small></td>
-                        <td><input type="number" class="input-vaha" value="${obj.skutecna_vaha_gr||''}" oninput="prepocet('${obj.id}', this.value, ${cenaKg})" id="gr-${obj.id}"></td>
-                        <td id="disp-${obj.id}" style="font-weight:bold;">${obj.skutecna_cena || 0} Kč</td>
-                        <td><input type="number" class="input-pay" value="${obj.zaplaceno||0}" id="pay-${obj.id}"></td>
-                        <td><button class="btn btn-save" onclick="uloz('${obj.id}', ${cenaKg}, '${prod}')">ULOŽIT</button></td>
-                    </tr>`;
+                    html += `<tr><td><b>${obj.zakaznik}</b></td><td>${obj.vaha} kg</td>
+                        <td><input type="number" class="input-vaha" value="${obj.skutecna_vaha_gr||''}" oninput="zivaCena('${obj.id}', this.value, ${cenaKg})" id="gr-${obj.id}"> gr</td>
+                        <td id="disp-${obj.id}"><b>${obj.skutecna_cena || 0} Kč</b></td>
+                        <td><input type="number" style="width:70px;" value="${obj.zaplaceno||0}" id="pay-${obj.id}"> Kč</td>
+                        <td><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg}, '${prod}')">ULOŽIT</button></td></tr>`;
                 });
-                divZbozi.innerHTML += html + `</tbody></table></div>`;
+                divZbozi.innerHTML += html + `</table></div>`;
             }
         });
     }
 
-    function prepocet(id, gr, cenaKg) {
-        document.getElementById("disp-" + id).innerText = Math.round((gr / 1000) * cenaKg) + " Kč";
-    }
+    function nactiStatistiky() {
+        db.ref("statistiky").on("value", (snap) => {
+            const stats = snap.val() || {};
+            const divVahy = document.getElementById("vypis-statistiky");
+            
+            // Zobrazení Ekonomiky
+            const trzby = stats.trzby_celkem || 0;
+            const naklady = stats.naklady_celkem || 0;
+            const zisk = trzby - naklady;
 
-    function uloz(id, cenaKg, prod) {
-        const gr = parseInt(document.getElementById("gr-"+id).value) || 0;
-        const pay = parseInt(document.getElementById("pay-"+id).value) || 0;
-        const cena = Math.round((gr / 1000) * cenaKg);
+            document.getElementById("stat-trzby").innerText = trzby + " Kč";
+            document.getElementById("stat-naklady").innerText = naklady + " Kč";
+            const ziskSpan = document.getElementById("stat-zisk");
+            ziskSpan.innerText = zisk + " Kč";
+            ziskSpan.className = zisk >= 0 ? "zisk-kladny" : "zisk-zaporny";
 
-        db.ref("objednavky/" + id).once("value").then((snap) => {
-            const d = snap.val();
-            const rozdilVaha = gr - (d.skutecna_vaha_gr || 0);
-            const rozdilTrzba = pay - (d.zaplaceno || 0);
-
-            db.ref("objednavky/" + id).update({ skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay });
-            if (rozdilVaha !== 0) db.ref("statistiky/vahy/" + prod).transaction(c => (c || 0) + rozdilVaha);
-            if (rozdilTrzba !== 0) db.ref("statistiky/celkove_trzby").transaction(c => (c || 0) + rozdilTrzba);
-            alert("Uloženo!");
+            // Zobrazení Vah
+            if (!stats.vahy) { divVahy.innerHTML = "Zatím žádné navážené zboží."; return; }
+            let html = "<table><tr><th>Druh zboží</th><th>Celkem naváženo</th></tr>";
+            for (let k in stats.vahy) {
+                html += `<tr><td>${k}</td><td><b>${(stats.vahy[k]/1000).toFixed(2)} kg</b></td></tr>`;
+            }
+            divVahy.innerHTML = html + "</table>";
         });
     }
 
     function pridejNaklad() {
         const castka = parseInt(document.getElementById("novy-naklad").value) || 0;
         if (castka > 0) {
-            db.ref("statistiky/celkove_naklady").transaction(c => (c || 0) + castka);
+            db.ref("statistiky/naklady_celkem").transaction((current) => (current || 0) + castka);
             document.getElementById("novy-naklad").value = "";
-            alert("Náklad zapsán.");
+            alert("Výdaj byl započítán.");
         }
     }
 
+    function uloz(id, cenaKg, nazevZbozi) {
+        const gr = parseInt(document.getElementById(`gr-${id}`).value) || 0;
+        const pay = parseInt(document.getElementById(`pay-${id}`).value) || 0;
+        const cena = Math.round((gr / 1000) * cenaKg);
+
+        db.ref("objednavky/" + id).once("value").then((snap) => {
+            const data = snap.val();
+            const staraVaha = data.skutecna_vaha_gr || 0;
+            const staraPlatba = data.zaplaceno || 0;
+            
+            const rozdilVaha = gr - staraVaha;
+            const rozdilPlatba = pay - staraPlatba;
+
+            // 1. Aktualizace objednávky
+            db.ref("objednavky/" + id).update({ skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay });
+            
+            // 2. Aktualizace statistiky váhy
+            if (rozdilVaha !== 0) {
+                db.ref("statistiky/vahy/" + nazevZbozi).transaction((current) => (current || 0) + rozdilVaha);
+            }
+
+            // 3. Aktualizace tržeb (počítáme z toho, co reálně "dostal" v poli Zaplaceno)
+            if (rozdilPlatba !== 0) {
+                db.ref("statistiky/trzby_celkem").transaction((current) => (current || 0) + rozdilPlatba);
+            }
+        });
+    }
+
+    function zivaCena(id, gramy, cenaKg) {
+        document.getElementById("disp-" + id).innerText = Math.round((gramy / 1000) * cenaKg) + " Kč";
+    }
+
     function resetStats() {
-        if (confirm("SMAZAT VŠECHNY STATISTIKY ROKU?")) db.ref("statistiky").remove();
+        if (confirm("POZOR! Smaže to všechny statistiky prodejů, tržeb i nákladů. Chcete pokračovat?")) {
+            db.ref("statistiky").remove();
+        }
     }
 </script>
 </body>
