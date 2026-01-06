@@ -11,27 +11,29 @@
         body { font-family: sans-serif; background: #f4f4f4; margin: 0; display: flex; flex-direction: column; }
         
         .hlavicka { background: var(--primary); color: white; padding: 20px; text-align: center; }
-        .obsah { display: grid; grid-template-columns: 300px 1fr; gap: 20px; padding: 20px; }
+        .obsah { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px; }
         
         /* Sidebar s listy */
         .sidebar { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .polozka-listu { display: block; padding: 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; text-decoration: none; color: #333; font-weight: bold; }
+        .polozka-box { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+        .polozka-listu { flex: 1; padding: 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: #333; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .polozka-listu:hover { background: #e3f2fd; border-color: #1976d2; }
+        .btn-smazat-list { background: #fee; color: #d32f2f; border: 1px solid #fcc; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-smazat-list:hover { background: #d32f2f; color: white; }
 
-        /* Hlavní část - Dluhy a přidávání */
+        /* Hlavní panel */
         .hlavni-panel { display: flex; flex-direction: column; gap: 20px; }
         .box { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
 
-        /* Tabulka dluhů */
+        /* Tabulky */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; background: #f8f9fa; padding: 10px; font-size: 0.8em; color: #666; }
         td { padding: 12px 10px; border-bottom: 1px solid #eee; }
         .dluh-castka { color: var(--danger); font-weight: bold; }
         .btn-zaplaceno { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
 
-        .form-skupina { margin-bottom: 15px; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-bottom: 10px; }
         .btn-pridat { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
@@ -43,11 +45,12 @@
 
 <div class="obsah">
     <div class="sidebar">
-        <h3>📂 LISTY K VÁŽENÍ</h3>
-        <div id="produkty-seznam">Načítám listy...</div>
+        <h3>📂 LISTY / NABÍDKA</h3>
+        <div id="produkty-seznam">Načítám...</div>
     </div>
 
     <div class="hlavni-panel">
+        
         <div class="box" style="border-top: 5px solid var(--danger);">
             <h3>🔴 SEZNAM DLUŽNÍKŮ</h3>
             <table>
@@ -59,23 +62,18 @@
                         <th>Akce</th>
                     </tr>
                 </thead>
-                <tbody id="dluhy-tabulka">
-                    <tr><td colspan="4" style="text-align:center;">Žádní dlužníci nejsou v databázi.</td></tr>
-                </tbody>
+                <tbody id="dluhy-tabulka"></tbody>
             </table>
             <h2 id="celkovy-dluh" style="text-align: right; color: var(--danger);"></h2>
         </div>
 
         <div class="box">
             <h3>➕ PŘIDAT NOVÉ ZBOŽÍ</h3>
-            <div class="form-skupina">
-                <input type="text" id="novy-nazev" placeholder="Název (např. Klobásy)">
-            </div>
-            <div class="form-skupina">
-                <input type="number" id="nova-cena" placeholder="Cena za kg">
-            </div>
+            <input type="text" id="novy-nazev" placeholder="Název zboží">
+            <input type="number" id="nova-cena" placeholder="Cena za kg">
             <button class="btn-pridat" onclick="vytvoritProdukt()">PŘIDAT DO NABÍDKY</button>
         </div>
+
     </div>
 </div>
 
@@ -84,23 +82,35 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 1. Načítání seznamu zboží (pro sidebar)
+    // 1. NAČÍTÁNÍ PRODUKTŮ + MAZÁNÍ LISTU
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
         const div = document.getElementById("produkty-seznam");
         div.innerHTML = "";
         for (let nazev in data) {
-            div.innerHTML += `<a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="polozka-listu">${nazev}</a>`;
+            div.innerHTML += `
+                <div class="polozka-box">
+                    <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="polozka-listu">${nazev}</a>
+                    <button class="btn-smazat-list" onclick="smazatProdukt('${nazev}')" title="Smazat z nabídky">✕</button>
+                </div>`;
         }
     });
 
-    // 2. NAČÍTÁNÍ DLUHŮ (Klíčová část)
+    function smazatProdukt(nazev) {
+        if (confirm(`Opravdu chcete úplně smazat "${nazev}" z nabídky i se všemi objednávkami?`)) {
+            // Smaže cenu z produktů
+            db.ref("produkty/" + nazev).remove();
+            // Smaže i všechny objednávky v tomto listu
+            db.ref("objednavky/" + nazev).remove();
+        }
+    }
+
+    // 2. NAČÍTÁNÍ DLUHŮ
     db.ref("dluhy").on("value", (snap) => {
         const data = snap.val() || {};
         const tabulka = document.getElementById("dluhy-tabulka");
         const sumaTxt = document.getElementById("celkovy-dluh");
         tabulka.innerHTML = "";
-        
         let suma = 0;
         let existujeDluh = false;
 
@@ -108,29 +118,21 @@
             existujeDluh = true;
             const d = data[id];
             suma += parseInt(d.castka || 0);
-            
             tabulka.innerHTML += `
                 <tr>
                     <td><strong>${d.jmeno}</strong></td>
                     <td><small>${d.zbozi || 'uzeniny'}</small></td>
                     <td class="dluh-castka">${d.castka} Kč</td>
-                    <td><button class="btn-zaplaceno" onclick="smazatDluh('${id}')">ZAPLACENO</button></td>
+                    <td><button class="btn-zaplaceno" onclick="db.ref('dluhy/${id}').remove()">ZAPLACENO</button></td>
                 </tr>`;
         }
-
         if (!existujeDluh) {
-            tabulka.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:green;">Všechny dluhy jsou smazány! 🥳</td></tr>';
+            tabulka.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:green;">Nikdo nic nedluží.</td></tr>';
             sumaTxt.innerText = "";
         } else {
             sumaTxt.innerText = "CELKEM CHYBÍ: " + suma + " Kč";
         }
     });
-
-    function smazatDluh(id) {
-        if (confirm("Opravdu smazat tento dluh?")) {
-            db.ref("dluhy/" + id).remove();
-        }
-    }
 
     function vytvoritProdukt() {
         const n = document.getElementById("novy-nazev").value.trim();
@@ -143,6 +145,5 @@
         }
     }
 </script>
-
 </body>
 </html>
