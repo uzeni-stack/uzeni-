@@ -12,13 +12,14 @@
         input { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 5px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; border: none; border-radius: 5px; background: #27ae60; color: white; font-weight: bold; cursor: pointer; }
         
-        #admin-content { display: none; } /* Schované dokud se nepodíš */
+        #admin-content { display: none; }
         
         .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; max-width: 400px; margin: auto; }
         .menu-item { background: #3498db; color: white; padding: 25px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 1.2em; box-shadow: 0 4px 0 #2980b9; }
         .menu-item:active { transform: translateY(4px); box-shadow: none; }
         
         .setup-box { background: white; color: #333; padding: 20px; border-radius: 12px; margin-top: 30px; text-align: left; }
+        .prod-list-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -31,22 +32,20 @@
 
     <div id="admin-content">
         <h1>Vítej, Boosi!</h1>
-        <p>Co chceš dnes dělat?</p>
         
         <div class="menu-grid">
             <a href="rozpis.html" class="menu-item">⚖️ VÁŽENÍ U UDÍRNY</a>
             <a href="finance.html" class="menu-item">💰 MOJE FINANCE</a>
-            <a href="index.html" class="menu-item" style="background:#95a5a6; box-shadow: 0 4px 0 #7f8c8d;">👁️ KONTROLA E-SHOPU</a>
         </div>
 
         <div class="setup-box">
-            <h3>🛠️ SPRÁVA NABÍDKY E-SHOPU</h3>
-            <p>Zde přidej, co lidi uvidí v indexu:</p>
+            <h3>🛠️ SPRÁVA NABÍDKY</h3>
+            <p style="font-size: 0.9em; color: #666;">Co zde přidáš, uvidí zákazníci v e-shopu:</p>
             <input type="text" id="p-nazev" placeholder="Název (např. Bůček)" style="border: 1px solid #ccc;">
             <input type="number" id="p-cena" placeholder="Cena za kg" style="border: 1px solid #ccc;">
             <button onclick="pridatDoNabidky()">PŘIDAT DO NABÍDKY</button>
             <hr>
-            <div id="seznam-nabidky" style="color: #666;"></div>
+            <div id="seznam-nabidky"></div>
         </div>
         
         <button onclick="odhlasit()" style="margin-top:40px; background:#e74c3c; width:auto; padding:10px 20px;">ODHLÁSIT SE</button>
@@ -57,10 +56,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // JEDNODUCHÉ HESLO
     function overit() {
         const h = document.getElementById("heslo").value;
-        if (h === "boos123") { // TADY SI ZMĚŇ HESLO
+        if (h === "boos123") { // Heslo si můžeš změnit
             sessionStorage.setItem("priblasen", "ano");
             zobrazAdmin();
         } else {
@@ -81,14 +79,17 @@
         location.reload();
     }
 
-    // SPRÁVA PRODUKTŮ
     function nactiNabidku() {
         db.ref("produkty").on("value", (snap) => {
             const data = snap.val() || {};
             const div = document.getElementById("seznam-nabidky");
-            div.innerHTML = "<b>Aktuálně nabízíš:</b><br>";
+            div.innerHTML = "<b>Aktuální nabídka:</b>";
             for (let n in data) {
-                div.innerHTML += `${n} (${data[n]} Kč) <button onclick="smazatNabidku('${n}')" style="background:none; color:red; border:none; cursor:pointer; width:auto; display:inline;">[x]</button><br>`;
+                div.innerHTML += `
+                    <div class="prod-list-item">
+                        <span>${n} (${data[n]} Kč)</span>
+                        <button onclick="smazatNabidku('${n}')" style="background:none; color:red; width:auto; padding:0; cursor:pointer;">[SMAZAT]</button>
+                    </div>`;
             }
         });
     }
@@ -104,10 +105,9 @@
     }
 
     function smazatNabidku(n) {
-        if (confirm("Smazat " + n + "?")) db.ref("produkty/" + n).remove();
+        if (confirm("Opravdu smazat " + n + " z e-shopu?")) db.ref("produkty/" + n).remove();
     }
 
-    // Automatické přihlášení pokud už jsi heslo zadal
     zobrazAdmin();
 </script>
 
