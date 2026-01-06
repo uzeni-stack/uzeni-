@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boos - Finance</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; }
+        .nav { background: #1976d2; padding: 15px; text-align: center; }
+        .nav a { color: white; margin: 0 15px; text-decoration: none; font-weight: bold; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 10px; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .zisk-kladny { color: green; font-size: 2em; font-weight: bold; }
+        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .btn-del { color: red; cursor: pointer; border: none; background: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<nav class="nav">
+    <a href="index.html">📦 OBJEDNÁVKY</a>
+    <a href="rozpis.html">⚖️ VÁŽENÍ</a>
+    <a href="finance.html" style="text-decoration: underline;">💰 FINANCE</a>
+</nav>
+
+<div class="container">
+    <div class="card" style="text-align: center;">
+        <h2 style="margin-top:0;">CELKOVÝ ZISK ROKU</h2>
+        <div id="stat-zisk" class="zisk-kladny">0 Kč</div>
+        <div style="display:flex; justify-content: space-around; margin-top: 20px;">
+            <div>TRŽBY<br><b id="stat-trzby" style="color:green;">0 Kč</b></div>
+            <div>NÁKLADY<br><b id="stat-naklady" style="color:red;">0 Kč</b></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>➕ PŘIDAT NÁKLAD</h3>
+        <input type="text" id="popis" placeholder="Za co?" style="padding:10px; width:150px;">
+        <input type="number" id="castka" placeholder="Kč" style="padding:10px; width:80px;">
+        <button onclick="pridej()" style="padding:10px; background: #1976d2; color:white; border:none; border-radius:5px;">ULOŽIT</button>
+    </div>
+
+    <div class="card">
+        <h3>📜 HISTORIE VÝDAJŮ</h3>
+        <div id="historie"></div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    db.ref("statistiky").on("value", (snap) => {
+        const s = snap.val() || {};
+        const trzby = s.trzby_celkem || 0;
+        const naklady = s.naklady_celkem || 0;
+        document.getElementById("stat-trzby").innerText = trzby + " Kč";
+        document.getElementById("stat-naklady").innerText = naklady + " Kč";
+        document.getElementById("stat-zisk").innerText = (trzby - naklady) + " Kč";
+
+        let hHtml = "";
+        if (s.list_nakladu) {
+            for (let key in s.list_nakladu) {
+                let n = s.list_nakladu[key];
+                hHtml += `<div class="row"><span>${n.popis}</span> <span><b>${n.castka} Kč</b> <button class="btn-del" onclick="smaz('${key}', ${n.castka})">X</button></span></div>`;
+            }
+        }
+        document.getElementById("historie").innerHTML = hHtml || "Žádné záznamy";
+    });
+
+    function pridej() {
+        const p = document.getElementById("popis").value || "Nespecifikováno";
+        const c = parseInt(document.getElementById("castka").value) || 0;
+        if (c > 0) {
+            db.ref("statistiky/list_nakladu").push({ popis: p, castka: c });
+            db.ref("statistiky/naklady_celkem").transaction(curr => (curr || 0) + c);
+            document.getElementById("popis").value = ""; document.getElementById("castka").value = "";
+        }
+    }
+
+    function smaz(key, c) {
+        if(confirm("Smazat?")) {
+            db.ref("statistiky/list_nakladu/" + key).remove();
+            db.ref("statistiky/naklady_celkem").transaction(curr => (curr || 0) - c);
+        }
+    }
+</script>
+</body>
+</html>
