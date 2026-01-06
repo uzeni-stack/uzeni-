@@ -17,13 +17,13 @@
         
         /* Admin sekce */
         #admin-panel { display: none; margin-top: 30px; padding: 15px; border: 3px solid #3a91d8; border-radius: 15px; background: #e3f2fd; }
-        .admin-header { color: #1976d2; font-weight: bold; margin-bottom: 15px; }
+        .admin-header { color: #1976d2; font-weight: bold; margin-bottom: 15px; font-size: 18px; }
         .objednavka-box { background: white; border-left: 5px solid #2e7d32; padding: 12px; margin-bottom: 10px; border-radius: 8px; position: relative; font-size: 14px; }
         .btn-hotovo { position: absolute; right: 10px; top: 10px; background: #4caf50; padding: 5px 10px; font-size: 11px; }
         
         /* Žlutý box pro SOUHRN MNOŽSTVÍ */
-        .souhrn-box { background: #fff9c4; padding: 15px; border-radius: 12px; margin: 15px 0; border: 2px solid #fbc02d; }
-        .souhrn-radek { display: flex; justify-content: space-between; border-bottom: 1px solid #f0e68c; padding: 5px 0; font-size: 15px; }
+        .souhrn-box { background: #fff9c4; padding: 15px; border-radius: 12px; margin: 15px 0; border: 2px solid #fbc02d; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .souhrn-radek { display: flex; justify-content: space-between; border-bottom: 1px solid #f0e68c; padding: 6px 0; font-size: 15px; }
         .celkem-trzba { text-align: center; font-weight: bold; color: #d32f2f; font-size: 18px; margin-top: 10px; padding-top: 10px; border-top: 2px solid #fbc02d; }
     </style>
 </head>
@@ -32,31 +32,41 @@
 <div class="box">
     <h2>🛒 E-shop FH</h2>
     <input type="text" id="jmeno" placeholder="Vaše jméno..." oninput="checkAdmin(this.value)">
-    <div id="nabidka">Načítám...</div>
+    
+    <div id="nabidka">Načítám nabídku...</div>
 
     <div id="admin-panel">
         <div class="admin-header">🛠 Administrace (Boos)</div>
         
         <div id="souhrn-zbozi" class="souhrn-box">
-            <strong style="display:block; margin-bottom:10px; font-size: 16px;">📊 Celkové množství k přípravě:</strong>
-            <div id="vypis-souhrnu">Načítám součty...</div>
+            <strong style="display:block; margin-bottom:10px; font-size: 16px; color: #856404;">📊 Celkem k přípravě:</strong>
+            <div id="vypis-souhrnu">Zatím žádné objednávky.</div>
             <div id="celkova-trzba-vypis" class="celkem-trzba">CELKEM: 0 Kč</div>
         </div>
 
-        <b>📋 Aktuální objednávky:</b>
+        <div style="background:white; padding:12px; border-radius:12px; margin-bottom:20px; border: 1px solid #bbdefb;">
+            <b>Přidat nové zboží:</b>
+            <input type="text" id="adm-nazev" placeholder="Název (např. AAA)" style="margin-top:10px;">
+            <input type="number" id="adm-cena" placeholder="Cena za kg">
+            <button onclick="ulozZbozi()" style="width:100%; background:#1976d2;">PŘIDAT</button>
+        </div>
+
+        <b>📋 Seznam objednávek:</b>
         <div id="adm-objednavky" style="margin-top:10px;"></div>
 
-        <hr style="border:0; border-top:1px solid #ccc; margin:15px 0;">
-        <b>📦 Správa zboží:</b>
-        <div id="adm-nabidka"></div>
+        <hr style="border:0; border-top:1px solid #ccc; margin:20px 0;">
+        <b>📦 Aktuální nabídka (Smazat):</b>
+        <div id="adm-nabidka" style="margin-top:10px;"></div>
     </div>
 </div>
 
 <script>
+    // TVOJE DATABÁZE
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Přihlášení admina
     function checkAdmin(val) {
         if (val === "Boos") {
             const h = prompt("Heslo:");
@@ -68,30 +78,40 @@
         }
     }
 
+    // Načítání zboží pro zákazníky
     db.ref("produkty").on("value", (snap) => {
         const div = document.getElementById("nabidka");
         const divAdm = document.getElementById("adm-nabidka");
         div.innerHTML = ""; divAdm.innerHTML = "";
+        
         snap.forEach((child) => {
             const n = child.key; const c = child.val();
-            div.innerHTML += `<div class="karta"><span><b>${n}</b><br><small>${c} Kč/kg</small></span><button onclick="objednat('${n}', ${c})">KOUPIT 0.5kg</button></div>`;
-            divAdm.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px 0; font-size:12px;"><span>${n} (${c} Kč)</span><button onclick="db.ref('produkty/${n}').remove()" style="background:red; color:white; border:none; padding:2px 5px; border-radius:5px;">Smazat</button></div>`;
+            div.innerHTML += `<div class="karta">
+                <span><b>${n}</b><br><small>${c} Kč/kg</small></span>
+                <button onclick="objednat('${n}', ${c})">0.5kg</button>
+            </div>`;
+            divAdm.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px 0; font-size:13px; border-bottom: 1px solid #eee;">
+                <span>${n} (${c} Kč)</span>
+                <button onclick="db.ref('produkty/${n}').remove()" style="background:red; color:white; border:none; padding:2px 6px; border-radius:5px; cursor:pointer;">X</button>
+            </div>`;
         });
     });
 
+    // Odeslání objednávky (opraveno pro součty a mobilní aplikaci)
     function objednat(co, cena) {
         const j = document.getElementById("jmeno").value.trim();
-        if (!j) return alert("Zadej jméno!");
+        if (!j) return alert("Nejdřív napiš své jméno nahoře!");
+        
         db.ref("objednavky").push().set({
             zakaznik: j,
             produkty: co,
             vaha: 0.5,
             celkem_kc: cena / 2,
             datum: new Date().toLocaleString("cs-CZ")
-        });
-        alert("Objednáno!");
+        }).then(() => alert("Objednávka na 0.5kg " + co + " odeslána!"));
     }
 
+    // Funkce pro admina - sčítání a seznam
     function nactiAdmin() {
         db.ref("objednavky").on("value", (snap) => {
             const divObj = document.getElementById("adm-objednavky");
@@ -102,34 +122,52 @@
             let souctyMnozstvi = {}; 
             let celkovaSuma = 0;
 
+            if (!snap.exists()) {
+                divObj.innerHTML = "Žádné objednávky.";
+                divSouhrn.innerHTML = "Žádné zboží k přípravě.";
+                divTrzba.innerHTML = "CELKEM: 0 Kč";
+                return;
+            }
+
             snap.forEach((child) => {
                 const o = child.val();
                 celkovaSuma += Number(o.celkem_kc || 0);
                 
-                // Logika pro sčítání kilogramů
-                let nazevProduktu = o.produkty;
-                let vahaObjednavky = Number(o.vaha || 0.5);
+                // Sčítání kil podle názvu produktu
+                let nazev = o.produkty;
+                let vaha = Number(o.vaha || 0.5);
 
-                if (!souctyMnozstvi[nazevProduktu]) {
-                    souctyMnozstvi[nazevProduktu] = 0;
+                if (!souctyMnozstvi[nazev]) {
+                    souctyMnozstvi[nazev] = 0;
                 }
-                souctyMnozstvi[nazevProduktu] += vahaObjednavky;
+                souctyMnozstvi[nazev] += vaha;
 
+                // Jednotlivé krabičky objednávek
                 divObj.innerHTML += `<div class="objednavka-box">
                     <button class="btn-hotovo" onclick="db.ref('objednavky/${child.key}').remove()">Hotovo ✓</button>
-                    <b>${o.zakaznik}</b>: ${o.produkty} (${vahaObjednavky}kg)<br>
+                    <b style="color:var(--admin-blue)">${o.zakaznik}</b>: ${o.produkty} (${vaha}kg)<br>
                     <small>${o.celkem_kc} Kč | ${o.datum}</small>
                 </div>`;
             });
 
-            // Vykreslení souhrnu (AAA: 2.5 kg atd.)
+            // Vytvoření seznamu AAA: 2.5kg atd.
             let htmlSouhrn = "";
             for (let produkt in souctyMnozstvi) {
                 htmlSouhrn += `<div class="souhrn-radek"><span>${produkt}:</span> <strong>${souctyMnozstvi[produkt].toFixed(1)} kg</strong></div>`;
             }
-            divSouhrn.innerHTML = htmlSouhrn || "Žádné objednávky k vyřízení.";
+            divSouhrn.innerHTML = htmlSouhrn;
             divTrzba.innerHTML = "💰 CELKOVÁ TRŽBA: " + celkovaSuma + " Kč";
         });
+    }
+
+    function ulozZbozi() {
+        const n = document.getElementById("adm-nazev").value;
+        const c = document.getElementById("adm-cena").value;
+        if (n && c) {
+            db.ref("produkty/" + n).set(parseInt(c));
+            document.getElementById("adm-nazev").value = "";
+            document.getElementById("adm-cena").value = "";
+        }
     }
 </script>
 </body>
