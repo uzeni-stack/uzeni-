@@ -3,49 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vážení - Rozpis</title>
+    <title>Rozpis uzení</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; margin: 0; padding: 10px; }
-        .hlavicka { background: #1976d2; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .hlavicka a { color: white; text-decoration: none; font-size: 0.8em; border: 1px solid white; padding: 5px 10px; border-radius: 5px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 800px; margin: auto; }
         
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        th { background: #eee; padding: 12px; text-align: left; font-size: 0.8em; color: #666; text-transform: uppercase; }
-        td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .hlavicka { background: #1976d2; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .hlavicka h2 { margin: 0; font-size: 1.2em; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-back { color: white; text-decoration: none; font-size: 0.75em; border: 1px solid rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 4px; transition: 0.3s; }
+        .btn-back:hover { background: rgba(255,255,255,0.1); }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.95em; }
+        th { background: #f1f3f5; padding: 12px 10px; text-align: left; color: #666; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 0.85em; }
+        td { padding: 12px 10px; border-bottom: 1px solid #eee; }
+
+        .zakaznik { font-weight: bold; color: #1976d2; display: block; }
+        .produkt { font-size: 0.9em; color: #555; display: block; margin-top: 2px; }
         
-        .zakaznik-info { font-weight: bold; color: #1976d2; font-size: 1.1em; }
-        .produkt-info { color: #333; margin-top: 4px; }
+        .vaha-objednano { font-weight: bold; color: #444; background: #fff3cd; padding: 4px 8px; border-radius: 4px; border: 1px solid #ffeeba; }
         
-        .vaha-objednano { font-size: 1.3em; font-weight: 900; color: #d32f2f; text-align: center; }
-        
-        input[type="number"] { width: 80px; padding: 10px; border: 2px solid #1976d2; border-radius: 5px; font-weight: bold; font-size: 1em; }
-        
-        .btn-hotovo { background: #2e7d32; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; text-transform: uppercase; }
-        .btn-hotovo:active { background: #1b5e20; transform: scale(0.95); }
+        .input-gramy { width: 70px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold; text-align: right; outline: none; }
+        .input-gramy:focus { border-color: #1976d2; box-shadow: 0 0 0 2px rgba(25,118,210,0.1); }
+
+        .btn-ok { background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em; transition: 0.2s; }
+        .btn-ok:hover { background: #218838; }
+        .btn-ok:active { transform: translateY(1px); }
+
+        @media (max-width: 480px) {
+            th:nth-child(2), td:nth-child(2) { text-align: center; }
+            .input-gramy { width: 60px; }
+        }
     </style>
 </head>
 <body>
 
-<div class="hlavicka">
-    <h2 style="margin:0;">⚖️ VÁŽENÍ U UDÍRNY</h2>
-    <a href="admin.html">ZPĚT DO MENU</a>
-</div>
+<div class="container">
+    <div class="hlavicka">
+        <h2>⚖️ Rozpis uzení</h2>
+        <a href="admin.html" class="btn-back">ZPĚT</a>
+    </div>
 
-<table>
-    <thead>
-        <tr>
-            <th>KDO / CO</th>
-            <th style="text-align:center;">OBJEDNÁNO</th>
-            <th>REÁLNÁ VÁHA (g)</th>
-            <th>AKCE</th>
-        </tr>
-    </thead>
-    <tbody id="obsah-tabulky">
-        <tr><td colspan="4" style="text-align:center; padding:30px;">Načítám objednávky...</td></tr>
-    </tbody>
-</table>
+    <table>
+        <thead>
+            <tr>
+                <th>ZÁKAZNÍK / CO</th>
+                <th>OBJEDNÁNO</th>
+                <th>REÁLNÁ (g)</th>
+                <th>AKCE</th>
+            </tr>
+        </thead>
+        <tbody id="vypis">
+            <tr><td colspan="4" style="text-align:center; padding:30px; color:#888;">Načítám objednávky...</td></tr>
+        </tbody>
+    </table>
+</div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -53,48 +66,44 @@
     const db = firebase.database();
 
     db.ref("objednavky").on("value", (snap) => {
-        const objednavky = snap.val() || {};
-        const tbody = document.getElementById("obsah-tabulky");
+        const data = snap.val() || {};
+        const tbody = document.getElementById("vypis");
         tbody.innerHTML = "";
 
-        for (let id in objednavky) {
-            const obj = objednavky[id];
-            const tr = document.createElement("tr");
+        const klice = Object.keys(data);
+        if (klice.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:40px; color:#999;'>Žádné nevyřízené objednávky.</td></tr>";
+            return;
+        }
 
+        klice.forEach(id => {
+            const obj = data[id];
+            const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>
-                    <div class="zakaznik-info">${obj.zakaznik}</div>
-                    <div class="produkt-info">${obj.produkty}</div>
+                    <span class="zakaznik">${obj.zakaznik}</span>
+                    <span class="produkt">${obj.produkty}</span>
                 </td>
-                <td class="vaha-objednano">
-                    ${obj.vaha} <small>kg</small>
-                </td>
+                <td><span class="vaha-objednano">${obj.vaha} kg</span></td>
                 <td>
-                    <input type="number" 
-                           placeholder="gramy" 
+                    <input type="number" class="input-gramy" 
                            value="${obj.skutecna_vaha_gr || ''}" 
-                           oninput="ulozVahu('${id}', this.value)"> <small>g</small>
+                           oninput="uloz('${id}', this.value)"> g
                 </td>
                 <td>
-                    <button class="btn-hotovo" onclick="odbavit('${id}', '${obj.zakaznik}')">HOTOVO</button>
+                    <button class="btn-ok" onclick="hotovo('${id}', '${obj.zakaznik}')">HOTOVO</button>
                 </td>
             `;
             tbody.appendChild(tr);
-        }
-
-        if (Object.keys(objednavky).length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:40px; color:#999;'>Vše je zváženo a vyřízeno! 🥓</td></tr>";
-        }
+        });
     });
 
-    // Uloží průběžně gramy do databáze
-    function ulozVahu(id, vaha) {
-        db.ref("objednavky/" + id).update({ skutecna_vaha_gr: parseInt(vaha) || 0 });
+    function uloz(id, v) {
+        db.ref("objednavky/" + id).update({ skutecna_vaha_gr: parseInt(v) || 0 });
     }
 
-    // Smaže objednávku po kliknutí na HOTOVO
-    function odbavit(id, jmeno) {
-        if (confirm("Odbavit zákazníka " + jmeno + "? Objednávka zmizí.")) {
+    function hotovo(id, jm) {
+        if (confirm("Odbavit zákazníka " + jm + "?")) {
             db.ref("objednavky/" + id).remove();
         }
     }
