@@ -3,45 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rozpis uzení</title>
+    <title>Rozpis uzení - Pokladna</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; margin: 0; padding: 10px; color: #333; }
-        .container { max-width: 800px; margin: auto; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 900px; margin: auto; }
         
-        .hlavicka { background: #1976d2; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .hlavicka h2 { margin: 0; font-size: 1.2em; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-back { color: white; text-decoration: none; font-size: 0.75em; border: 1px solid rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 4px; transition: 0.3s; }
-        .btn-back:hover { background: rgba(255,255,255,0.1); }
+        .hlavicka { background: #1976d2; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .hlavicka h2 { margin: 0; font-size: 1.1em; text-transform: uppercase; }
+        .btn-back { color: white; text-decoration: none; font-size: 0.8em; border: 1px solid rgba(255,255,255,0.5); padding: 5px 10px; border-radius: 4px; }
 
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.95em; }
-        th { background: #f1f3f5; padding: 12px 10px; text-align: left; color: #666; font-weight: 600; border-bottom: 2px solid #dee2e6; font-size: 0.85em; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th { background: #f1f3f5; padding: 10px; text-align: left; color: #666; font-size: 0.8em; border-bottom: 2px solid #dee2e6; }
         td { padding: 12px 10px; border-bottom: 1px solid #eee; }
 
         .zakaznik { font-weight: bold; color: #1976d2; display: block; }
-        .produkt { font-size: 0.9em; color: #555; display: block; margin-top: 2px; }
+        .produkt { font-size: 0.85em; color: #555; }
         
-        .vaha-objednano { font-weight: bold; color: #444; background: #fff3cd; padding: 4px 8px; border-radius: 4px; border: 1px solid #ffeeba; }
+        .vaha-objednano { font-weight: bold; font-size: 0.9em; background: #e9ecef; padding: 3px 6px; border-radius: 4px; }
         
-        .input-gramy { width: 70px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold; text-align: right; outline: none; }
-        .input-gramy:focus { border-color: #1976d2; box-shadow: 0 0 0 2px rgba(25,118,210,0.1); }
+        .input-gramy { width: 70px; padding: 8px; border: 2px solid #1976d2; border-radius: 5px; font-weight: bold; text-align: right; font-size: 1em; }
+        
+        .cena-celkem { font-weight: 900; color: #2e7d32; font-size: 1.2em; white-space: nowrap; }
+        .cena-za-kg { font-size: 0.7em; color: #999; display: block; }
 
-        .btn-ok { background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em; transition: 0.2s; }
+        .btn-ok { background: #28a745; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-ok:hover { background: #218838; }
-        .btn-ok:active { transform: translateY(1px); }
-
-        @media (max-width: 480px) {
-            th:nth-child(2), td:nth-child(2) { text-align: center; }
-            .input-gramy { width: 60px; }
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="hlavicka">
-        <h2>⚖️ Rozpis uzení</h2>
+        <h2>⚖️ VÁŽENÍ A PLATBY</h2>
         <a href="admin.html" class="btn-back">ZPĚT</a>
     </div>
 
@@ -51,11 +46,12 @@
                 <th>ZÁKAZNÍK / CO</th>
                 <th>OBJEDNÁNO</th>
                 <th>REÁLNÁ (g)</th>
+                <th>K PLATBĚ</th>
                 <th>AKCE</th>
             </tr>
         </thead>
         <tbody id="vypis">
-            <tr><td colspan="4" style="text-align:center; padding:30px; color:#888;">Načítám objednávky...</td></tr>
+            <tr><td colspan="5" style="text-align:center; padding:30px;">Načítám data...</td></tr>
         </tbody>
     </table>
 </div>
@@ -65,45 +61,63 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    db.ref("objednavky").on("value", (snap) => {
-        const data = snap.val() || {};
-        const tbody = document.getElementById("vypis");
-        tbody.innerHTML = "";
+    let cenik = {};
 
-        const klice = Object.keys(data);
-        if (klice.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:40px; color:#999;'>Žádné nevyřízené objednávky.</td></tr>";
-            return;
-        }
-
-        klice.forEach(id => {
-            const obj = data[id];
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>
-                    <span class="zakaznik">${obj.zakaznik}</span>
-                    <span class="produkt">${obj.produkty}</span>
-                </td>
-                <td><span class="vaha-objednano">${obj.vaha} kg</span></td>
-                <td>
-                    <input type="number" class="input-gramy" 
-                           value="${obj.skutecna_vaha_gr || ''}" 
-                           oninput="uloz('${id}', this.value)"> g
-                </td>
-                <td>
-                    <button class="btn-ok" onclick="hotovo('${id}', '${obj.zakaznik}')">HOTOVO</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+    // 1. Nejdřív načteme ceník produktů
+    db.ref("produkty").on("value", (snap) => {
+        cenik = snap.val() || {};
+        nactiObjednavky(); // Poté načteme objednávky
     });
+
+    // 2. Načtení objednávek a výpočet ceny
+    function nactiObjednavky() {
+        db.ref("objednavky").on("value", (snap) => {
+            const data = snap.val() || {};
+            const tbody = document.getElementById("vypis");
+            tbody.innerHTML = "";
+
+            for (let id in data) {
+                const obj = data[id];
+                const cenaZaKg = cenik[obj.produkty] || 0;
+                const vahaKg = (obj.skutecna_vaha_gr || 0) / 1000;
+                const vyslednaCena = Math.round(vahaKg * cenaZaKg);
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>
+                        <span class="zakaznik">${obj.zakaznik}</span>
+                        <span class="produkt">${obj.produkty}</span>
+                    </td>
+                    <td><span class="vaha-objednano">${obj.vaha} kg</span></td>
+                    <td>
+                        <input type="number" class="input-gramy" 
+                               value="${obj.skutecna_vaha_gr || ''}" 
+                               oninput="uloz('${id}', this.value)"> g
+                    </td>
+                    <td>
+                        <span class="cena-celkem">${vyslednaCena} Kč</span>
+                        <span class="cena-za-kg">${cenaZaKg} Kč/kg</span>
+                    </td>
+                    <td>
+                        <button class="btn-ok" onclick="hotovo('${id}', '${obj.zakaznik}', ${vyslednaCena})">HOTOVO</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            if (Object.keys(data).length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:40px; color:#999;'>Hotovo! Vše zváženo a prodáno.</td></tr>";
+            }
+        });
+    }
 
     function uloz(id, v) {
         db.ref("objednavky/" + id).update({ skutecna_vaha_gr: parseInt(v) || 0 });
     }
 
-    function hotovo(id, jm) {
-        if (confirm("Odbavit zákazníka " + jm + "?")) {
+    function hotovo(id, jm, cena) {
+        if (confirm("Odbavit " + jm + " za " + cena + " Kč?")) {
+            // Tady by šlo přidat kód, který tu cenu uloží do financí, než se objednávka smaže
             db.ref("objednavky/" + id).remove();
         }
     }
