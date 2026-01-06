@@ -7,20 +7,34 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 10px; }
-        .hlavicka { background: #1976d2; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .karta { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #1976d2; }
-        .vstup { width: 70px; padding: 8px; border: 2px solid #1976d2; border-radius: 5px; text-align: center; font-weight: bold; }
-        .cena { font-weight: 900; color: #d32f2f; font-size: 1.2em; min-width: 80px; text-align: right; }
-        .btn-ok { background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
+        .hlavicka { background: #1976d2; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .karta { background: white; padding: 15px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 8px solid #1976d2; }
+        
+        .zakaznik-box { margin-bottom: 10px; }
+        .jmeno { font-weight: bold; font-size: 1.2em; display: block; }
+        .info-obj { color: #856404; background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
+
+        .vstupy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .vstup-pole { display: flex; flex-direction: column; }
+        .vstup-pole label { font-size: 0.7em; color: #666; font-weight: bold; margin-bottom: 2px; }
+        
+        .vstup { padding: 10px; border: 2px solid #1976d2; border-radius: 6px; font-weight: bold; font-size: 1.1em; text-align: center; }
+        .vstup-zapl { border-color: #2e7d32; color: #2e7d32; }
+
+        .vysledek-box { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 6px; margin-top: 10px; }
+        .cena { font-weight: 900; color: #d32f2f; font-size: 1.4em; }
+        
+        .btn-ok { background: #2e7d32; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="hlavicka">
-        <h2 id="nadpis">Rozpis</h2>
-        <a href="admin.html" style="color:white; text-decoration:none;">ZPĚT</a>
+        <h2 id="nadpis" style="margin:0;">Rozpis</h2>
+        <a href="admin.html" style="color:white; text-decoration:none; font-weight:bold; border:1px solid white; padding:5px 10px; border-radius:5px;">ZPĚT</a>
     </div>
-    <div id="seznam"></div>
+    
+    <div id="seznam" style="padding: 10px;"></div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -32,45 +46,77 @@
     document.getElementById("nadpis").innerText = produktFiltr || "Rozpis";
 
     let cenaKg = 0;
-    // 1. Zjistíme cenu pro tento list
+
+    // 1. Zjistíme cenu z čeníku
     db.ref("produkty/" + produktFiltr).once("value", (s) => {
         cenaKg = s.val() || 0;
+        
         // 2. Načteme lidi jen z tohoto listu
         db.ref("objednavky/" + produktFiltr).on("value", (snap) => {
             if (document.activeElement.tagName === "INPUT") return;
             const data = snap.val() || {};
             const seznam = document.getElementById("seznam");
             seznam.innerHTML = "";
+
             for (let id in data) {
                 const obj = data[id];
-                const g = obj.skutecna_vaha_gr || 0;
-                const z = obj.zaplaceno || 0;
-                const kc = Math.round((g / 1000) * cenaKg);
+                const vahaGr = obj.skutecna_vaha_gr || 0;
+                const zaplaceno = obj.zaplaceno || 0;
+                const celkovaCena = Math.round((vahaGr / 1000) * cenaKg);
+
                 seznam.innerHTML += `
                     <div class="karta">
-                        <div><b>${obj.zakaznik}</b><br><small>Chce: ${obj.vaha} kg</small></div>
-                        <input type="number" class="vstup" id="v-${id}" value="${g || ''}" placeholder="g" oninput="calc('${id}')" onchange="upd('${id}','skutecna_vaha_gr',this.value)">
-                        <div class="cena" id="c-${id}">${kc} Kč</div>
-                        <input type="number" class="vstup" id="z-${id}" value="${z || ''}" placeholder="Kč" onchange="upd('${id}','zaplaceno',this.value)">
-                        <button class="btn-ok" onclick="hotovo('${id}','${obj.zakaznik}')">OK</button>
+                        <div class="zakaznik-box">
+                            <span class="jmeno">${obj.zakaznik}</span>
+                            <span class="info-obj">OBJEDNÁNO: ${obj.vaha_objednano} kg</span>
+                        </div>
+
+                        <div class="vstupy-grid">
+                            <div class="vstup-pole">
+                                <label>VÁHA NA VÁZE (g)</label>
+                                <input type="number" class="vstup" id="v-${id}" value="${vahaGr || ''}" 
+                                       placeholder="např. 1250" 
+                                       oninput="calc('${id}')" 
+                                       onchange="upd('${id}','skutecna_vaha_gr',this.value)">
+                            </div>
+                            <div class="vstup-pole">
+                                <label>ZAPLATIL (Kč)</label>
+                                <input type="number" class="vstup vstup-zapl" id="z-${id}" value="${zaplaceno || ''}" 
+                                       placeholder="Kč" 
+                                       onchange="upd('${id}','zaplaceno',this.value)">
+                            </div>
+                        </div>
+
+                        <div class="vysledek-box">
+                            <div class="cena" id="c-${id}">${celkovaCena} Kč</div>
+                            <button class="btn-ok" onclick="hotovo('${id}','${obj.zakaznik}')">HOTOVO / OK</button>
+                        </div>
                     </div>`;
+            }
+            if(seznam.innerHTML === "") {
+                seznam.innerHTML = "<p style='text-align:center; margin-top:50px; color:#888;'>V tomto listu nejsou žádné objednávky.</p>";
             }
         });
     });
 
     function calc(id) {
         const g = document.getElementById("v-" + id).value || 0;
-        document.getElementById("c-" + id).innerText = Math.round((g / 1000) * cenaKg) + " Kč";
+        const vysledek = Math.round((g / 1000) * cenaKg);
+        document.getElementById("c-" + id).innerText = vysledek + " Kč";
     }
-    function upd(id, p, v) {
-        db.ref("objednavky/" + produktFiltr + "/" + id).update({ [p]: parseInt(v) || 0 });
+
+    function upd(id, pole, hodnota) {
+        db.ref("objednavky/" + produktFiltr + "/" + id).update({ [pole]: parseInt(hodnota) || 0 });
     }
-    function hotovo(id, jm) {
-        const kc = parseInt(document.getElementById("c-" + id).innerText);
-        const zap = parseInt(document.getElementById("z-" + id).value) || 0;
-        if (kc - zap > 0) {
-            if (confirm("Zapsat dluh " + (kc-zap) + " Kč?")) {
-                db.ref("dluhy").push({ jmeno: jm, zbozi: produktFiltr, castka: kc-zap });
+
+    function hotovo(id, jmeno) {
+        const cenaKplatbe = parseInt(document.getElementById("c-" + id).innerText);
+        const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
+        const rozdil = cenaKplatbe - zaplaceno;
+
+        if (rozdil > 0) {
+            if (confirm("Zákazník dluží " + rozdil + " Kč. Chceš to zapsat do dluhů?")) {
+                db.ref("dluhy").push({ jmeno: jmeno, zbozi: produktFiltr, castka: rozdil, datum: new Date().toLocaleDateString() });
             }
         }
         db.ref("objednavky/" + produktFiltr + "/" + id).remove();
