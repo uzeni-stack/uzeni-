@@ -3,36 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokladna Boos - Komplet</title>
+    <title>Pokladna Boos - Zisky a Náklady</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
         .container { max-width: 1000px; margin: auto; }
-        .sumar-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 15px; padding: 15px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .sumar-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
         .zbozi-sekce { background: white; margin-bottom: 20px; border-radius: 12px; border: 1px solid #1976d2; overflow: hidden; }
         .zbozi-hlavicka { background: #1976d2; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; }
-        .stats-box { background: #cfd8dc; border: 2px solid #455a64; border-radius: 15px; padding: 15px; margin-top: 40px; }
+        .stats-box { background: #eceff1; border: 2px solid #455a64; border-radius: 15px; padding: 15px; margin-top: 40px; }
         table { width: 100%; border-collapse: collapse; background: white; }
         td, th { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
-        .input-vaha { width: 70px; padding: 8px; border: 1px solid #1976d2; border-radius: 5px; font-weight: bold; }
+        .input-vaha { width: 70px; padding: 8px; border: 1px solid #1976d2; border-radius: 5px; }
         .btn-save { background: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .dluh { color: red; font-weight: bold; }
+        .money-plus { color: #2e7d32; font-weight: bold; }
+        .money-minus { color: #d32f2f; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align:center;">📊 POKLADNA A VÁŽENÍ</h2>
+    <h2 style="text-align:center;">📊 POKLADNA, ZISKY A VÁŽENÍ</h2>
 
     <div id="vypis-sumar-root"></div>
-
-    <div id="vypis-zbozi">Načítám objednávky...</div>
+    <div id="vypis-zbozi">Načítám...</div>
 
     <div class="stats-box">
-        <h3 style="margin-top:0;">📈 CELOROČNÍ SOUČET PRODEJŮ</h3>
-        <div id="vypis-statistiky">Zatím prázdno...</div>
-        <button onclick="resetStats()" style="margin-top:10px; color:red; cursor:pointer;">Resetovat statistiku na konci roku</button>
+        <h3 style="margin-top:0;">📈 CELOROČNÍ EKONOMIKA</h3>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; background: white; padding: 15px; border-radius: 10px;">
+            <div>Celkové tržby: <span id="stat-trzby" class="money-plus">0 Kč</span></div>
+            <div>Celkové náklady: <span id="stat-naklady" class="money-minus">0 Kč</span></div>
+            <div style="font-size: 1.2em;">Čistý zisk: <span id="stat-zisk" style="font-weight:bold;">0 Kč</span></div>
+        </div>
+        
+        <div style="margin-top: 15px; padding: 10px; border-top: 1px solid #ccc;">
+            <input type="number" id="novy-naklad" placeholder="Částka nákladu (Kč)" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            <button onclick="pridejNaklad()" style="padding: 8px 15px; background: #455a64; color:white; border:none; border-radius:5px; cursor:pointer;">PŘIDAT NÁKLAD</button>
+        </div>
+
+        <div id="vypis-statistiky-vaha" style="margin-top: 20px;"></div>
+        <button onclick="resetStats()" style="margin-top:20px; color:#d32f2f; border:none; background:none; cursor:pointer; font-size:12px;">Resetovat vše (konec roku)</button>
     </div>
 </div>
 
@@ -45,7 +56,7 @@
     db.ref("produkty").on("value", (snap) => {
         cenyZbozi = snap.val() || {};
         nactiData();
-        nactiStatistiky();
+        nactiEkonomiku();
     });
 
     function nactiData() {
@@ -53,12 +64,7 @@
             const data = snap.val();
             const divZbozi = document.getElementById("vypis-zbozi");
             const divSumarRoot = document.getElementById("vypis-sumar-root");
-            
-            if (!data) { 
-                divZbozi.innerHTML = "<p>Žádné aktivní objednávky k vážení.</p>"; 
-                divSumarRoot.innerHTML = "";
-                return; 
-            }
+            if (!data) { divZbozi.innerHTML = "Žádné aktivní objednávky."; divSumarRoot.innerHTML = ""; return; }
             
             divZbozi.innerHTML = "";
             let poJmenech = {}; let poZbozi = {};
@@ -72,15 +78,13 @@
                 poZbozi[o.produkty].push(o);
             }
 
-            // SUMÁŘ PODLE JMÉN
-            let sumarHtml = `<div class="sumar-box"><h3>💰 SUMÁŘ K PLATBĚ</h3><table><tr><th>Zákazník</th><th>Celkem Cena</th><th>Zaplaceno</th><th>Zbývá</th></tr>`;
+            let sumarHtml = `<div class="sumar-box"><h3>💰 SUMÁŘ K PLATBĚ</h3><table><tr><th>Zákazník</th><th>Cena</th><th>Zaplaceno</th><th>Zbývá</th></tr>`;
             for (let jm in poJmenech) {
                 let zb = poJmenech[jm].cena - poJmenech[jm].zaplaceno;
-                sumarHtml += `<tr><td><b>${jm}</b></td><td>${poJmenech[jm].cena} Kč</td><td>${poJmenech[jm].zaplaceno} Kč</td><td class="${zb>0?'dluh':''}"><b>${zb} Kč</b></td></tr>`;
+                sumarHtml += `<tr><td><b>${jm}</b></td><td>${poJmenech[jm].cena} Kč</td><td>${poJmenech[jm].zaplaceno} Kč</td><td style="color:${zb>0?'red':''}"><b>${zb} Kč</b></td></tr>`;
             }
             divSumarRoot.innerHTML = sumarHtml + `</table></div>`;
 
-            // TABULKY ZBOŽÍ
             for (let prod in poZbozi) {
                 let cenaKg = cenyZbozi[prod] || 0;
                 let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${prod}</span><span>${cenaKg} Kč/kg</span></div><table>`;
@@ -96,16 +100,21 @@
         });
     }
 
-    function nactiStatistiky() {
+    function nactiEkonomiku() {
         db.ref("statistiky").on("value", (snap) => {
-            const stats = snap.val();
-            const div = document.getElementById("vypis-statistiky");
-            if (!stats) { div.innerHTML = "Zatím žádné prodeje v deníku."; return; }
-            let html = "<table><tr><th>Druh zboží</th><th>Celkem naváženo</th></tr>";
-            for (let k in stats) {
-                html += `<tr><td>${k}</td><td><b>${(stats[k]/1000).toFixed(2)} kg</b></td></tr>`;
-            }
-            div.innerHTML = html + "</table>";
+            const s = snap.val() || {};
+            const trzby = s.celkove_trzby || 0;
+            const naklady = s.celkove_naklady || 0;
+            const vahy = s.vahy || {};
+
+            document.getElementById("stat-trzby").innerText = trzby + " Kč";
+            document.getElementById("stat-naklady").innerText = naklady + " Kč";
+            document.getElementById("stat-zisk").innerText = (trzby - naklady) + " Kč";
+            document.getElementById("stat-zisk").className = (trzby - naklady) >= 0 ? "money-plus" : "money-minus";
+
+            let vHtml = "<h4>Prodaná množství:</h4><table>";
+            for (let k in vahy) { vHtml += `<tr><td>${k}</td><td><b>${(vahy[k]/1000).toFixed(2)} kg</b></td></tr>`; }
+            document.getElementById("vypis-statistiky-vaha").innerHTML = vHtml + "</table>";
         });
     }
 
@@ -115,13 +124,24 @@
         const cena = Math.round((gr / 1000) * cenaKg);
 
         db.ref("objednavky/" + id).once("value").then((snap) => {
-            const staraVaha = snap.val().skutecna_vaha_gr || 0;
-            const rozdil = gr - staraVaha;
+            const d = snap.val();
+            const rozdilVaha = gr - (d.skutecna_vaha_gr || 0);
+            const rozdilTrzba = pay - (d.zaplaceno || 0);
+
             db.ref("objednavky/" + id).update({ skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay });
-            if (rozdil !== 0) {
-                db.ref("statistiky/" + nazevZbozi).transaction((current) => (current || 0) + rozdil);
-            }
+            
+            if (rozdilVaha !== 0) db.ref("statistiky/vahy/" + nazevZbozi).transaction(c => (c || 0) + rozdilVaha);
+            if (rozdilTrzba !== 0) db.ref("statistiky/celkove_trzby").transaction(c => (c || 0) + rozdilTrzba);
         });
+    }
+
+    function pridejNaklad() {
+        const castka = parseInt(document.getElementById("novy-naklad").value);
+        if (castka > 0) {
+            db.ref("statistiky/celkove_naklady").transaction(c => (c || 0) + castka);
+            document.getElementById("novy-naklad").value = "";
+            alert("Náklad přidán!");
+        }
     }
 
     function zivaCena(id, gramy, cenaKg) {
@@ -129,7 +149,7 @@
     }
 
     function resetStats() {
-        if (confirm("Opravdu vynulovat celoroční statistiku?")) db.ref("statistiky").remove();
+        if (confirm("OPRAVDU SMAZAT CELOU ROČNÍ STATISTIKU I ZISKY?")) db.ref("statistiky").remove();
     }
 </script>
 </body>
