@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rozpis Zboží - Boos</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .zbozi-sekce { background: white; margin-bottom: 30px; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #1976d2; }
+        .zbozi-hlavicka { background: #1976d2; color: white; padding: 15px; font-size: 20px; font-weight: bold; display: flex; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #e3f2fd; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 13px; }
+        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .zebra tr:nth-child(even) { background: #f9f9f9; }
+        .input-vaha { width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .dluh { color: #d32f2f; font-weight: bold; }
+        .ok { color: #2e7d32; font-weight: bold; }
+        .suma-row { background: #eee !important; font-weight: bold; }
+        @media print { .no-print { display: none; } body { padding: 0; } .zbozi-sekce { box-shadow: none; border: 1px solid #000; page-break-inside: avoid; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h2>📊 Rozpis k vážení</h2>
+        <button onclick="window.print()" style="padding: 10px 20px; cursor:pointer; background:#444; color:white; border:none; border-radius:8px;">TISKNOUT SEZNAM</button>
+    </div>
+
+    <div id="vypis-zbozi">Načítám data z databáze...</div>
+</div>
+
+<script>
+    // TVOJE FIREBASE (Stejná jako v e-shopu)
+    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Načteme ceny produktů, abychom mohli počítat výslednou cenu
+    let cenyProduktu = {};
+    db.ref("produkty").on("value", (snap) => {
+        cenyProduktu = snap.val() || {};
+        nactiObjednavky();
+    });
+
+    function nactiObjednavky() {
+        db.ref("objednavky").on("value", (snap) => {
+            const data = snap.val();
+            const vystup = document.getElementById("vypis-zbozi");
+            vystup.innerHTML = "";
+
+            if (!data) { vystup.innerHTML = "Žádné objednávky k rozdělení."; return; }
+
+            // 1. Seskupíme objednávky podle zboží
+            let seskupeno = {};
+            for (let id in data) {
+                let o = data[id];
+                if (!seskupeno[o.produkty]) seskupeno[o.produkty] = [];
+                seskupeno[o.produkty].push(o);
+            }
+
+            // 2. Pro každé zboží vytvoříme tabulku
+            for (let produkt in seskupeno) {
+                let cenaZaKg = cenyProduktu[produkt] || 0;
+                let html = `
+                    <div class="zbozi-sekce">
+                        <div class="zbozi-hlavicka">
+                            <span>📦 ${produkt}</span>
+                            <span>${cenaZaKg} Kč/kg</span>
+                        </div>
+                        <table class="zebra">
+                            <thead>
+                                <tr>
+                                    <th>Zákazník</th>
+                                    <th>Objednáno</th>
+                                    <th>Skutečnost (gr)</th>
+                                    <th>Cena celkem</th>
+                                    <th>Zaplaceno</th>
+                                    <th>Zbývá</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                
+                let sumaKg = 0;
+                let sumaKc = 0;
+
+                seskupeno[produkt].forEach(obj => {
+                    let vahaObj = obj.vaha || 0.5;
+                    sumaKg += vahaObj;
+                    sumaKc += obj.celkem_kc;
+
+                    html += `
+                        <tr>
+                            <td><b>${obj.zakaznik}</b></td>
+                            <td>${vahaObj} kg</td>
+                            <td><input type="number" class="input-vaha no-print" placeholder="gramy" oninput="prepocitej(this, ${cenaZaKg})"></td>
+                            <td class="vysledna-cena">0 Kč</td>
+                            <td><input type="number" class="input-vaha no-print" value="0"> Kč</td>
+                            <td class="dluh">0 Kč</td>
+                        </tr>`;
+                });
+
+                html += `
+                            <tr class="suma-row">
+                                <td>CELKEM:</td>
+                                <td>${sumaKg.toFixed(1)} kg</td>
+                                <td>-</td>
+                                <td>${sumaKc} Kč</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+                vystup.innerHTML += html;
+            }
+        });
+    }
+
+    function prepocitej(el, cenaZaKg) {
+        let gramy = el.value;
+        let radek = el.closest("tr");
+        let bunkaCena = radek.querySelector(".vysledna-cena");
+        let cena = (gramy / 1000) * cenaZaKg;
+        bunkaCena.innerText = Math.round(cena) + " Kč";
+        
+        // Jednoduchý dopočet dluhu (zatím jen vizuálně na stránce)
+        let zaplaceno = radek.querySelectorAll("input")[1].value;
+        radek.querySelector(".dluh").innerText = (Math.round(cena) - zaplaceno) + " Kč";
+    }
+</script>
+</body>
+</html>
