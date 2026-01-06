@@ -3,35 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rozpis a Dluhy - Boos</title>
+    <title>Váha a Dlužníci - Boos</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
         .container { max-width: 1000px; margin: auto; }
+        
+        /* SEKCE DLUŽNÍCI */
+        .alert-box { background: #ffebee; border: 2px solid #d32f2f; border-radius: 15px; padding: 15px; margin-bottom: 25px; display: none; }
+        .alert-title { color: #d32f2f; font-weight: bold; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .dluznik-radek { background: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; border-left: 5px solid #d32f2f; font-size: 14px; }
+
         .zbozi-sekce { background: white; margin-bottom: 25px; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #1976d2; }
         .zbozi-hlavicka { background: #1976d2; color: white; padding: 12px 15px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th { background: #e3f2fd; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 11px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; min-width: 650px; }
+        th { background: #e3f2fd; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 11px; }
         td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
         .zebra tr:nth-child(even) { background: #f9f9f9; }
         .input-vaha { width: 65px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
-        .input-penize { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; }
-        .btn-save { background: #2e7d32; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .input-penize { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; background: #fffde7; }
+        .btn-save { background: #2e7d32; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .dluh-vypis { font-weight: bold; color: #d32f2f; }
         .ok-vypis { font-weight: bold; color: #2e7d32; }
-        .no-print { margin-bottom: 10px; }
-        @media print { .no-print { display: none; } .zbozi-sekce { border: 1px solid #000; break-inside: avoid; } }
+        @media print { .no-print { display: none; } .zbozi-sekce, .alert-box { border: 1px solid #000; break-inside: avoid; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="no-print" style="display: flex; justify-content: space-between; padding: 10px 0;">
-        <h2 style="margin:0;">📊 Váha a Pokladna</h2>
-        <button onclick="window.print()">TISK ROZPISU</button>
+    <div class="no-print" style="display: flex; justify-content: space-between; padding: 10px 0; align-items: center;">
+        <h2 style="margin:0;">📊 Pokladna a Rozpis</h2>
+        <button onclick="window.print()" style="padding: 10px 20px; cursor:pointer;">TISK</button>
     </div>
-    <div id="vypis-zbozi">Načítám...</div>
+
+    <div id="sekce-dluznici" class="alert-box">
+        <div class="alert-title">⚠️ POZOR - SEZNAM DLUŽNÍKŮ</div>
+        <div id="seznam-dluhy"></div>
+    </div>
+
+    <div id="vypis-zbozi">Načítám data...</div>
 </div>
 
 <script>
@@ -50,7 +61,13 @@
         db.ref("objednavky").on("value", (snap) => {
             const data = snap.val();
             const vystup = document.getElementById("vypis-zbozi");
+            const divDluznici = document.getElementById("seznam-dluhy");
+            const sekceDluznici = document.getElementById("sekce-dluznici");
+            
             vystup.innerHTML = "";
+            divDluznici.innerHTML = "";
+            let dluzniciFound = false;
+
             if (!data) return;
 
             let seskupeno = {};
@@ -58,13 +75,27 @@
                 let o = data[id]; o.id = id;
                 if (!seskupeno[o.produkty]) seskupeno[o.produkty] = [];
                 seskupeno[o.produkty].push(o);
+                
+                // Kontrola dluhu pro horní sekci
+                let cena = o.skutecna_cena || 0;
+                let zaplaceno = o.zaplaceno || 0;
+                if (cena > 0 && zaplaceno < cena) {
+                    dluzniciFound = true;
+                    divDluznici.innerHTML += `
+                        <div class="dluznik-radek">
+                            <span><b>${o.zakaznik}</b> (${o.produkty})</span>
+                            <span class="dluh-vypis">Dluží: ${cena - zaplaceno} Kč</span>
+                        </div>`;
+                }
             }
+
+            sekceDluznici.style.display = dluzniciFound ? "block" : "none";
 
             for (let produkt in seskupeno) {
                 let cenaKg = cenyZbozi[produkt] || 0;
                 let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${produkt}</span> <span>${cenaKg} Kč/kg</span></div>
-                    <table class="zebra"><thead><tr>
-                        <th>Zákazník</th><th>Objednáno</th><th>Váha (gr)</th><th>Cena</th><th>Zaplaceno</th><th>Rozdíl</th><th class="no-print">Akce</th>
+                    <table><thead><tr>
+                        <th>Zákazník</th><th>Objednáno</th><th>Gramy</th><th>Cena</th><th>Zaplaceno</th><th>Rozdíl</th><th class="no-print">Akce</th>
                     </tr></thead><tbody>`;
 
                 seskupeno[produkt].forEach(obj => {
@@ -76,11 +107,11 @@
                     html += `<tr>
                         <td><b>${obj.zakaznik}</b></td>
                         <td>${obj.vaha} kg</td>
-                        <td><input type="number" class="input-vaha" value="${skv}" oninput="vypocetNaRadku('${obj.id}', ${cenaKg})" id="gr-${obj.id}"></td>
+                        <td><input type="number" class="input-vaha" value="${skv}" oninput="prepocet('${obj.id}', ${cenaKg})" id="gr-${obj.id}"></td>
                         <td id="cen-${obj.id}">${cena} Kč</td>
-                        <td><input type="number" class="input-penize" value="${zaplaceno}" oninput="vypocetNaRadku('${obj.id}', ${cenaKg})" id="pay-${obj.id}"></td>
+                        <td><input type="number" class="input-penize" value="${zaplaceno}" oninput="prepocet('${obj.id}', ${cenaKg})" id="pay-${obj.id}"></td>
                         <td id="dif-${obj.id}" class="${rozdil < 0 ? 'dluh-vypis' : 'ok-vypis'}">${rozdil} Kč</td>
-                        <td class="no-print"><button class="btn-save" onclick="ulozRadek('${obj.id}', ${cenaKg})">ULOŽIT</button></td>
+                        <td class="no-print"><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg})">ULOŽIT</button></td>
                     </tr>`;
                 });
                 vystup.innerHTML += html + `</tbody></table></div>`;
@@ -88,28 +119,24 @@
         });
     }
 
-    function vypocetNaRadku(id, cenaKg) {
+    function prepocet(id, cenaKg) {
         let gr = document.getElementById(`gr-${id}`).value || 0;
         let pay = document.getElementById(`pay-${id}`).value || 0;
         let cena = Math.round((gr / 1000) * cenaKg);
         let rozdil = pay - cena;
-        
         document.getElementById(`cen-${id}`).innerText = cena + " Kč";
         let difEl = document.getElementById(`dif-${id}`);
         difEl.innerText = rozdil + " Kč";
         difEl.className = rozdil < 0 ? 'dluh-vypis' : 'ok-vypis';
     }
 
-    function ulozRadek(id, cenaKg) {
+    function uloz(id, cenaKg) {
         const gr = parseInt(document.getElementById(`gr-${id}`).value) || 0;
         const pay = parseInt(document.getElementById(`pay-${id}`).value) || 0;
         const cena = Math.round((gr / 1000) * cenaKg);
-
         db.ref("objednavky/" + id).update({
-            skutecna_vaha_gr: gr,
-            skutecna_cena: cena,
-            zaplaceno: pay
-        }).then(() => { alert("Uloženo k " + id); });
+            skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay
+        }).then(() => { console.log("Uloženo"); });
     }
 </script>
 </body>
