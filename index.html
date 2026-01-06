@@ -3,89 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domácí Uzeniny - Objednávka</title>
+    <title>E-shop - Objednávka</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #fdfdfd; margin: 0; padding: 15px; color: #333; }
-        .container { max-width: 600px; margin: auto; }
-        
-        header { text-align: center; padding: 20px 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 30px; }
-        header h1 { margin: 0; color: #d32f2f; font-size: 1.8em; text-transform: uppercase; }
-        header p { margin: 5px 0 0; color: #666; font-style: italic; }
-
-        /* Karty produktů */
-        #nabidka { display: flex; flex-direction: column; gap: 20px; }
-        .karta-produktu { 
-            background: white; 
-            border: 1px solid #eee; 
-            border-radius: 12px; 
-            padding: 20px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .produkt-hlavicka { display: flex; justify-content: space-between; align-items: center; }
-        .produkt-nazev { font-size: 1.3em; font-weight: bold; color: #1a1a1a; margin: 0; }
-        .produkt-cena { color: #d32f2f; font-weight: bold; font-size: 1.1em; }
-
-        /* Volba váhy */
-        .volba-vahy { display: flex; align-items: center; gap: 10px; }
-        .volba-vahy label { font-size: 0.9em; font-weight: bold; color: #555; }
-        select { flex: 1; padding: 10px; border-radius: 6px; border: 2px solid #eee; font-size: 1em; background: #f9f9f9; cursor: pointer; }
-
-        /* Tlačítko objednat */
-        .btn-objednat { 
-            background: #d32f2f; 
-            color: white; 
-            border: none; 
-            padding: 12px; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            font-size: 1em; 
-            cursor: pointer; 
-            transition: 0.2s;
-            text-transform: uppercase;
-        }
-        .btn-objednat:hover { background: #b71c1c; }
-        .btn-objednat:active { transform: scale(0.98); }
-
-        footer { text-align: center; margin-top: 40px; color: #aaa; font-size: 0.8em; }
+        body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
+        .karta { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .btn { background: #d32f2f; color: white; border: none; width: 100%; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <header>
-        <h1>🥩 NAŠE UZENINY</h1>
-        <p>Objednejte si poctivé domácí produkty</p>
-    </header>
-
-    <div id="nabidka">
-        <p style="text-align:center;">Načítám aktuální nabídku...</p>
-    </div>
-
-    <footer>
-        &copy; 2026 Domácí udírna - Vše čerstvé a poctivé
-    </footer>
-</div>
-
+    <h1 style="text-align:center;">🥩 NAŠE NABÍDKA</h1>
+    <div id="nabidka"></div>
 <script>
-    // --- KONFIGURACE FIREBASE ---
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- AUTOMATICKÉ NAČÍTÁNÍ NABÍDKY Z ADMINA ---
     db.ref("produkty").on("value", (snap) => {
         const produkty = snap.val() || {};
         const container = document.getElementById("nabidka");
-        container.innerHTML = ""; // Vyčistit starou nabídku
-
+        container.innerHTML = "";
         for (let nazev in produkty) {
-            const cena = produkty[nazev];
-            
-            const karta = document.createElement("div");
-            karta.className = "karta-produktu";
-            karta.innerHTML = `
+            container.innerHTML += `
+                <div class="karta">
+                    <h2>${nazev}</h2>
+                    <p>Cena: ${produkty[nazev]} Kč/kg</p>
+                    <select id="vaha-${nazev}">
+                        <option value="0.5">0.5 kg</option>
+                        <option value="1.0" selected>1.0 kg</option>
+                        <option value="2.0">2.0 kg</option>
+                    </select>
+                    <button class="btn" onclick="objednat('${nazev}')">Objednat</button>
+                </div>`;
+        }
+    });
+
+    function objednat(produkt) {
+        const vaha = document.getElementById("vaha-" + produkt).value;
+        const jmeno = prompt("Tvoje jméno:");
+        if (jmeno) {
+            // Tady je ten zápis do VLASTNÍHO listu
+            db.ref("objednavky/" + produkt).push({
+                zakaznik: jmeno,
+                vaha: vaha,
+                skutecna_vaha_gr: 0,
+                zaplaceno: 0
+            }).then(() => alert("Objednáno!"));
+        }
+    }
+</script>
+</body>
+</html>
