@@ -9,121 +9,134 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
         
-        /* LEVÝ PANEL - TLAČÍTKA */
+        /* LEVÝ PANEL */
         .sidebar { 
-            width: 250px; 
+            width: 260px; 
             background: #263238; 
             color: white; 
             padding: 20px; 
             display: flex; 
             flex-direction: column; 
-            gap: 10px;
             overflow-y: auto;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            border-right: 1px solid #000;
         }
-        .sidebar h2 { font-size: 0.9em; color: #90a4ae; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid #37474f; padding-bottom: 5px; }
+        .sidebar h2 { font-size: 0.8em; color: #90a4ae; text-transform: uppercase; letter-spacing: 1px; }
         
+        #sidebar-produkty { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+
         .btn-polozka { 
             background: #37474f; 
-            color: white; 
+            color: #fff; 
             text-decoration: none; 
             padding: 15px; 
-            border-radius: 6px; 
-            text-align: center; 
+            border-radius: 8px; 
             font-weight: bold;
-            border: 1px solid transparent;
+            display: block;
+            border: 1px solid rgba(255,255,255,0.1);
             transition: 0.2s;
         }
-        .btn-polozka:hover { background: #1976d2; border-color: #64b5f6; }
-        .btn-polozka span { display: block; font-size: 0.75em; font-weight: normal; opacity: 0.7; }
+        .btn-polozka:hover { background: #1976d2; transform: translateX(5px); }
+        .btn-polozka span { display: block; font-size: 0.7em; color: #90a4ae; margin-top: 4px; }
 
-        /* HLAVNÍ OBSAH - FORMULÁŘ */
+        /* HLAVNÍ PLOCHA */
         .hlavni-obsah { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
-        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h1 { margin-top: 0; color: #1976d2; font-size: 1.5em; }
-
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
-        .btn-add { background: #28a745; color: white; border: none; width: 100%; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1.1em; margin-top: 10px; }
+        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         
-        .btn-smazat-vse { margin-top: auto; background: #c62828; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; opacity: 0.6; }
-        .btn-smazat-vse:hover { opacity: 1; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 1em; outline: none; }
+        input:focus { border-color: #1976d2; }
+        
+        .btn-add { background: #2e7d32; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em; margin-top: 10px; }
+        .btn-add:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2>Tvé produkty</h2>
-        <div id="sidebar-produkty" style="display: flex; flex-direction: column; gap: 10px;">
-            </div>
-        
-        <button class="btn-smazat-vse" onclick="vymazatVsechnyProdukty()">Resetovat sortiment</button>
+        <h2>📦 AKTIVNÍ SORTIMENT</h2>
+        <div id="sidebar-produkty">
+            <p style="font-size: 0.8em; color: #666;">Načítám zboží...</p>
+        </div>
     </div>
 
     <div class="hlavni-obsah">
         <div class="box">
-            <h1>➕ Přidat nové zboží</h1>
-            <p style="color: #666; font-size: 0.9em;">Zadejte název masa a cenu za 1 kg. Po uložení se produkt okamžitě objeví na e-shopu i v levém menu.</p>
+            <h1 style="margin:0 0 20px 0; font-size: 1.4em; color: #1976d2;">Vytvořit nové zboží</h1>
             
-            <input type="text" id="nazev" placeholder="Název (např. Klobása libová)">
-            <input type="number" id="cena" placeholder="Cena za kg (Kč)">
+            <label style="font-size: 0.8em; font-weight: bold; color: #555;">NÁZEV PRODUKTU</label>
+            <input type="text" id="nazev" placeholder="např. Šunka od kosti">
             
-            <button class="btn-add" onclick="pridatZbozi()">Uložit do nabídky</button>
+            <label style="font-size: 0.8em; font-weight: bold; color: #555;">CENA (za 1 kg)</label>
+            <input type="number" id="cena" placeholder="Kč">
+            
+            <button class="btn-add" onclick="pridatZbozi()">ULOŽIT A VYTVOŘIT TLAČÍTKO</button>
         </div>
-        
-        <div style="margin-top: 20px;">
-            <a href="index.html" style="color: #1976d2; text-decoration: none; font-weight: bold;">← Jít na e-shop (pro lidi)</a>
-        </div>
+
+        <p style="margin-top: 30px; font-size: 0.9em; color: #888;">
+            Tip: Kliknutím na tlačítko vlevo přejdeš k vážení daného masa.
+        </p>
     </div>
 
 <script>
+    // --- KONFIGURACE FIREBASE ---
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Načítání zboží do sidebaru
+    // --- NAČÍTÁNÍ TLAČÍTEK DO SIDEBARU ---
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
         const sidebar = document.getElementById("sidebar-produkty");
-        sidebar.innerHTML = "";
+        sidebar.innerHTML = ""; // Vyčistit
 
-        // Seřadit abecedně
-        const klice = Object.keys(data).sort();
+        const produktyKlice = Object.keys(data).sort();
 
-        klice.forEach(nazev => {
+        if (produktyKlice.length === 0) {
+            sidebar.innerHTML = '<p style="font-size: 0.8em; color: #555;">Zatím žádné zboží.</p>';
+        }
+
+        produktyKlice.forEach(nazev => {
             const cena = data[nazev];
+            
+            // Vytvoření elementu tlačítka (odkazu)
             const odkaz = document.createElement("a");
             odkaz.href = `rozpis.html?filtr=${encodeURIComponent(nazev)}`;
             odkaz.className = "btn-polozka";
-            odkaz.innerHTML = `${nazev} <span>${cena} Kč/kg</span>`;
+            odkaz.innerHTML = `
+                ${nazev.toUpperCase()}
+                <span>Cena: ${cena} Kč/kg</span>
+            `;
             
-            // Přidáme možnost smazat produkt pravým tlačítkem nebo podržením
+            // Smazání produktu pravým tlačítkem (pro jistotu)
             odkaz.oncontextmenu = (e) => {
                 e.preventDefault();
-                if(confirm("Smazat produkt " + nazev + "?")) db.ref("produkty/" + nazev).remove();
+                if(confirm("Odstranit " + nazev + " z nabídky?")) {
+                    db.ref("produkty/" + nazev).remove();
+                }
             };
-            
+
             sidebar.appendChild(odkaz);
         });
     });
 
-    // Uložení nového zboží
+    // --- FUNKCE PŘIDÁNÍ ---
     function pridatZbozi() {
-        const nazev = document.getElementById("nazev").value.trim();
-        const cena = document.getElementById("cena").value.trim();
+        const nazevInput = document.getElementById("nazev");
+        const cenaInput = document.getElementById("cena");
+        
+        const nazev = nazevInput.value.trim();
+        const cena = cenaInput.value.trim();
 
         if (nazev && cena) {
-            db.ref("produkty/" + nazev).set(parseInt(cena)).then(() => {
-                document.getElementById("nazev").value = "";
-                document.getElementById("cena").value = "";
-            });
+            // Uložíme do Firebase pod uzel "produkty"
+            db.ref("produkty/" + nazev).set(parseInt(cena))
+                .then(() => {
+                    nazevInput.value = "";
+                    cenaInput.value = "";
+                    console.log("Uloženo úspěšně");
+                })
+                .catch((error) => alert("Chyba: " + error.message));
         } else {
-            alert("Musíš vyplnit název i cenu!");
-        }
-    }
-
-    function vymazatVsechnyProdukty() {
-        if(confirm("Opravdu smazat CELÝ sortiment? Tato akce nejde vrátit!")) {
-            db.ref("produkty").remove();
+            alert("Musíš vyplnit obě pole!");
         }
     }
 </script>
