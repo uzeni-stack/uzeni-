@@ -3,145 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOOS - Správa objednávek</title>
+    <title>BOOS - Aktuální uzení</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 50px; }
-        
-        /* Navigace - stejná pro všechny stránky */
-        nav { 
-            background: #1976d2; 
-            padding: 15px; 
-            text-align: center; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        nav a { 
-            color: white; 
-            margin: 0 12px; 
-            text-decoration: none; 
-            font-weight: bold; 
-            font-size: 1.1em;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-        nav a:hover { background: rgba(255,255,255,0.2); }
-        .active { border-bottom: 3px solid white; }
-
-        .container { max-width: 800px; margin: 30px auto; padding: 0 15px; }
-        
-        h2 { text-align: center; color: #333; margin-bottom: 25px; }
-
-        .objednavka-karta { 
-            background: white; 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 15px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            border-left: 6px solid #1976d2;
-        }
-        
-        .zakaznik-jmeno { font-size: 1.2em; font-weight: bold; color: #1976d2; display: block; }
-        .produkty-vaha { color: #555; margin-top: 5px; font-size: 1.1em; }
-        
-        .btn-smazat { 
-            background: #d32f2f; 
-            color: white; 
-            border: none; 
-            padding: 12px 18px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .btn-smazat:hover { background: #b71c1c; }
-
-        /* Responzivita pro mobily */
-        @media (max-width: 500px) {
-            .objednavka-karta { flex-direction: column; text-align: center; gap: 15px; }
-            nav a { font-size: 0.9em; margin: 0 5px; }
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: auto; }
+        header { text-align: center; padding: 20px 0; border-bottom: 2px solid #1976d2; margin-bottom: 30px; }
+        h1 { margin: 0; color: #1976d2; letter-spacing: 2px; }
+        .karta { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #1976d2; }
+        .jmeno { font-weight: bold; font-size: 1.2em; display: block; margin-bottom: 5px; }
+        .produkty { color: #666; font-style: italic; }
+        .vaha { float: right; font-weight: bold; color: #1976d2; }
     </style>
 </head>
 <body>
 
-<nav>
-    <a href="index.html" class="active">📦 OBJEDNÁVKY</a>
-    <a href="rozpis.html">⚖️ VÁŽENÍ</a>
-    <a href="finance.html">💰 FINANCE</a>
-</nav>
-
 <div class="container">
-    <h2>📥 NOVÉ OBJEDNÁVKY Z E-SHOPU</h2>
-    
-    <div id="vypis-objednavek">
-        <p style="text-align:center; color: #888;">Načítám objednávky z cloudu...</p>
-    </div>
+    <header>
+        <h1>UDÍRNA BOOS</h1>
+        <p>Aktuálně připravované objednávky</p>
+    </header>
+
+    <div id="vypis-verejny">Načítám objednávky...</div>
 </div>
 
 <script>
-    // Konfigurace tvé Firebase
-    const firebaseConfig = { 
-        databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" 
-    };
+    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Sledování změn v databázi objednávek
     db.ref("objednavky").on("value", (snap) => {
         const data = snap.val();
-        const divVypis = document.getElementById("vypis-objednavek");
+        const div = document.getElementById("vypis-verejny");
+        if (!data) { div.innerHTML = "<p style='text-align:center;'>Momentálně neudíme žádné nové objednávky.</p>"; return; }
         
-        if (!data) { 
-            divVypis.innerHTML = `
-                <div style="text-align:center; margin-top:50px; color:#888;">
-                    <span style="font-size: 4em;">📭</span>
-                    <p>Žádné nové objednávky k vyřízení.</p>
-                </div>`; 
-            return; 
-        }
-        
-        divVypis.innerHTML = "";
-        
-        // Vykreslení každé objednávky jako karty
+        div.innerHTML = "";
         for (let id in data) {
-            let obj = data[id];
-            divVypis.innerHTML += `
-                <div class="objednavka-karta">
-                    <div>
-                        <span class="zakaznik-jmeno">${obj.zakaznik}</span>
-                        <div class="produkty-vaha">
-                            <strong>${obj.produkty}</strong> — cca ${obj.vaha} kg
-                        </div>
-                    </div>
-                    <div>
-                        <button class="btn-smazat" onclick="smazatObjednavku('${id}', '${obj.zakaznik}')">
-                            HOTOVO / SMAZAT
-                        </button>
-                    </div>
+            let o = data[id];
+            div.innerHTML += `
+                <div class="karta">
+                    <span class="vaha">${o.vaha} kg</span>
+                    <span class="jmeno">${o.zakaznik}</span>
+                    <span class="produkty">${o.produkty}</span>
                 </div>`;
         }
     });
-
-    // Funkce pro smazání objednávky (vyřízení)
-    function smazatObjednavku(id, jmeno) {
-        if (confirm(`Opravdu chcete objednávku pro: ${jmeno} smazat?\n(Zároveň zmizí i z tabulky vážení!)`)) {
-            db.ref("objednavky/" + id).remove()
-            .then(() => {
-                console.log("Smazáno");
-            })
-            .catch((error) => {
-                alert("Chyba při mazání: " + error.message);
-            });
-        }
-    }
 </script>
-
 </body>
 </html>
