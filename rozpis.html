@@ -3,53 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Váha a Dlužníci - Boos</title>
+    <title>Váha a Sumář - Boos</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
         .container { max-width: 1000px; margin: auto; }
-        
-        /* SEKCE DLUŽNÍCI */
         .alert-box { background: #ffebee; border: 2px solid #d32f2f; border-radius: 15px; padding: 15px; margin-bottom: 25px; display: none; }
-        .alert-title { color: #d32f2f; font-weight: bold; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        .dluznik-radek { background: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; border-left: 5px solid #d32f2f; font-size: 14px; }
-
-        .zbozi-sekce { background: white; margin-bottom: 25px; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #1976d2; }
-        .zbozi-hlavicka { background: #1976d2; color: white; padding: 12px 15px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; }
+        .alert-title { color: #d32f2f; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+        .sumar-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
+        .zbozi-sekce { background: white; margin-bottom: 25px; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #1976d2; }
+        .zbozi-hlavicka { background: #1976d2; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; }
         table { width: 100%; border-collapse: collapse; min-width: 650px; }
-        th { background: #e3f2fd; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; font-size: 11px; }
-        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .zebra tr:nth-child(even) { background: #f9f9f9; }
-        .input-vaha { width: 65px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
-        .input-penize { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; background: #fffde7; }
-        .btn-save { background: #2e7d32; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        th { background: #e3f2fd; padding: 8px; text-align: left; border-bottom: 2px solid #ccc; font-size: 11px; }
+        td { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .input-vaha { width: 60px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; }
+        .input-penize { width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; background: #fffde7; }
+        .btn-save { background: #2e7d32; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .dluh-vypis { font-weight: bold; color: #d32f2f; }
         .ok-vypis { font-weight: bold; color: #2e7d32; }
-        @media print { .no-print { display: none; } .zbozi-sekce, .alert-box { border: 1px solid #000; break-inside: avoid; } }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="no-print" style="display: flex; justify-content: space-between; padding: 10px 0; align-items: center;">
-        <h2 style="margin:0;">📊 Pokladna a Rozpis</h2>
-        <button onclick="window.print()" style="padding: 10px 20px; cursor:pointer;">TISK</button>
+        <h2 style="margin:0;">📊 Váha a Pokladna</h2>
+        <button onclick="window.print()">TISK</button>
     </div>
 
     <div id="sekce-dluznici" class="alert-box">
-        <div class="alert-title">⚠️ POZOR - SEZNAM DLUŽNÍKŮ</div>
+        <div class="alert-title">⚠️ AKTUÁLNÍ DLUŽNÍCI</div>
         <div id="seznam-dluhy"></div>
     </div>
 
-    <div id="vypis-zbozi">Načítám data...</div>
+    <div id="sekce-sumar" class="sumar-box">
+        <div style="color: #1b5e20; font-weight: bold; font-size: 18px; margin-bottom: 10px;">💰 SUMÁŘ PODLE JMÉNA (K PLATBĚ)</div>
+        <table style="background: white; border-radius: 10px;">
+            <thead>
+                <tr style="background: #c8e6c9;">
+                    <th>Jméno zákazníka</th><th>Položek</th><th>Celkem Cena</th><th>Zaplaceno</th><th>Zbývá doplatit</th>
+                </tr>
+            </thead>
+            <tbody id="vypis-sumar"></tbody>
+        </table>
+    </div>
+
+    <div id="vypis-zbozi">Načítám objednávky...</div>
 </div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     let cenyZbozi = {};
 
     db.ref("produkty").on("value", (snap) => {
@@ -60,83 +67,74 @@
     function nactiData() {
         db.ref("objednavky").on("value", (snap) => {
             const data = snap.val();
-            const vystup = document.getElementById("vypis-zbozi");
-            const divDluznici = document.getElementById("seznam-dluhy");
-            const sekceDluznici = document.getElementById("sekce-dluznici");
-            
-            vystup.innerHTML = "";
-            divDluznici.innerHTML = "";
-            let dluzniciFound = false;
-
             if (!data) return;
 
-            let seskupeno = {};
+            const divZbozi = document.getElementById("vypis-zbozi");
+            const divDluznici = document.getElementById("seznam-dluhy");
+            const divSumar = document.getElementById("vypis-sumar");
+            const sekceDluznici = document.getElementById("sekce-dluznici");
+            
+            divZbozi.innerHTML = ""; divDluznici.innerHTML = ""; divSumar.innerHTML = "";
+            let dluzniciFound = false;
+            let poJmenech = {};
+            let seskupenoZbozi = {};
+
             for (let id in data) {
                 let o = data[id]; o.id = id;
-                if (!seskupeno[o.produkty]) seskupeno[o.produkty] = [];
-                seskupeno[o.produkty].push(o);
-                
-                // Kontrola dluhu pro horní sekci
                 let cena = o.skutecna_cena || 0;
                 let zaplaceno = o.zaplaceno || 0;
+
+                // Seskupení pro Sumář podle jména
+                if (!poJmenech[o.zakaznik]) poJmenech[o.zakaznik] = { ks: 0, cena: 0, zaplaceno: 0 };
+                poJmenech[o.zakaznik].ks++;
+                poJmenech[o.zakaznik].cena += cena;
+                poJmenech[o.zakaznik].zaplaceno += zaplaceno;
+
+                // Seskupení pro tabulky zboží
+                if (!seskupenoZbozi[o.produkty]) seskupenoZbozi[o.produkty] = [];
+                seskupenoZbozi[o.produkty].push(o);
+
+                // Dluhy nahoře
                 if (cena > 0 && zaplaceno < cena) {
                     dluzniciFound = true;
-                    divDluznici.innerHTML += `
-                        <div class="dluznik-radek">
-                            <span><b>${o.zakaznik}</b> (${o.produkty})</span>
-                            <span class="dluh-vypis">Dluží: ${cena - zaplaceno} Kč</span>
-                        </div>`;
+                    divDluznici.innerHTML += `<div style="padding:5px; border-bottom:1px solid #ffcdd2;"><b>${o.zakaznik}</b>: ${o.produkty} (Chybí ${cena-zaplaceno} Kč)</div>`;
                 }
             }
-
             sekceDluznici.style.display = dluzniciFound ? "block" : "none";
 
-            for (let produkt in seskupeno) {
+            // Vykreslení Sumáře
+            for (let jmeno in poJmenech) {
+                let p = poJmenech[jmeno];
+                let rozdil = p.cena - p.zaplaceno;
+                divSumar.innerHTML += `<tr>
+                    <td><b>${jmeno}</b></td><td>${p.ks}</td>
+                    <td>${p.cena} Kč</td><td>${p.zaplaceno} Kč</td>
+                    <td class="${rozdil > 0 ? 'dluh-vypis' : 'ok-vypis'}">${rozdil > 0 ? rozdil + ' Kč' : 'OK'}</td>
+                </tr>`;
+            }
+
+            // Vykreslení tabulek zboží
+            for (let produkt in seskupenoZbozi) {
                 let cenaKg = cenyZbozi[produkt] || 0;
                 let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${produkt}</span> <span>${cenaKg} Kč/kg</span></div>
-                    <table><thead><tr>
-                        <th>Zákazník</th><th>Objednáno</th><th>Gramy</th><th>Cena</th><th>Zaplaceno</th><th>Rozdíl</th><th class="no-print">Akce</th>
-                    </tr></thead><tbody>`;
-
-                seskupeno[produkt].forEach(obj => {
-                    let skv = obj.skutecna_vaha_gr || "";
-                    let cena = obj.skutecna_cena || 0;
-                    let zaplaceno = obj.zaplaceno || 0;
-                    let rozdil = zaplaceno - cena;
-
-                    html += `<tr>
-                        <td><b>${obj.zakaznik}</b></td>
-                        <td>${obj.vaha} kg</td>
-                        <td><input type="number" class="input-vaha" value="${skv}" oninput="prepocet('${obj.id}', ${cenaKg})" id="gr-${obj.id}"></td>
-                        <td id="cen-${obj.id}">${cena} Kč</td>
-                        <td><input type="number" class="input-penize" value="${zaplaceno}" oninput="prepocet('${obj.id}', ${cenaKg})" id="pay-${obj.id}"></td>
-                        <td id="dif-${obj.id}" class="${rozdil < 0 ? 'dluh-vypis' : 'ok-vypis'}">${rozdil} Kč</td>
-                        <td class="no-print"><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg})">ULOŽIT</button></td>
-                    </tr>`;
+                    <table><thead><tr><th>Zákazník</th><th>Objednáno</th><th>Gramy</th><th>Cena</th><th>Zaplaceno</th><th>Akce</th></tr></thead><tbody>`;
+                seskupenoZbozi[produkt].forEach(obj => {
+                    html += `<tr><td><b>${obj.zakaznik}</b></td><td>${obj.vaha} kg</td>
+                        <td><input type="number" class="input-vaha" value="${obj.skutecna_vaha_gr||''}" id="gr-${obj.id}"></td>
+                        <td id="cen-${obj.id}">${obj.skutecna_cena||0} Kč</td>
+                        <td><input type="number" class="input-penize" value="${obj.zaplaceno||0}" id="pay-${obj.id}"></td>
+                        <td><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg})">ULOŽIT</button></td></tr>`;
                 });
-                vystup.innerHTML += html + `</tbody></table></div>`;
+                divZbozi.innerHTML += html + `</tbody></table></div>`;
             }
         });
-    }
-
-    function prepocet(id, cenaKg) {
-        let gr = document.getElementById(`gr-${id}`).value || 0;
-        let pay = document.getElementById(`pay-${id}`).value || 0;
-        let cena = Math.round((gr / 1000) * cenaKg);
-        let rozdil = pay - cena;
-        document.getElementById(`cen-${id}`).innerText = cena + " Kč";
-        let difEl = document.getElementById(`dif-${id}`);
-        difEl.innerText = rozdil + " Kč";
-        difEl.className = rozdil < 0 ? 'dluh-vypis' : 'ok-vypis';
     }
 
     function uloz(id, cenaKg) {
         const gr = parseInt(document.getElementById(`gr-${id}`).value) || 0;
         const pay = parseInt(document.getElementById(`pay-${id}`).value) || 0;
         const cena = Math.round((gr / 1000) * cenaKg);
-        db.ref("objednavky/" + id).update({
-            skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay
-        }).then(() => { console.log("Uloženo"); });
+        db.ref("objednavky/" + id).update({ skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay });
     }
 </script>
 </body>
