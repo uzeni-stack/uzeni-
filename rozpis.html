@@ -3,114 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boos - Vážení</title>
+    <title>Vážení - Rozpis</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 30px; }
-        /* Navigace */
-        nav { background: #1976d2; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        nav a { color: white; margin: 0 15px; text-decoration: none; font-weight: bold; font-size: 1.1em; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; margin: 0; padding: 10px; }
+        .hlavicka { background: #1976d2; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .hlavicka a { color: white; text-decoration: none; font-size: 0.8em; border: 1px solid white; padding: 5px 10px; border-radius: 5px; }
         
-        .container { max-width: 1000px; margin: auto; padding: 10px; }
-        .sumar-box { background: #e8f5e9; border: 2px solid #2e7d32; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-        .zbozi-sekce { background: white; margin-bottom: 20px; border-radius: 12px; border: 1px solid #1976d2; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .zbozi-hlavicka { background: #1976d2; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th { background: #eee; padding: 12px; text-align: left; font-size: 0.8em; color: #666; text-transform: uppercase; }
+        td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
         
-        table { width: 100%; border-collapse: collapse; }
-        td, th { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background: #f8f9fa; font-size: 0.8em; color: #666; }
+        .zakaznik-info { font-weight: bold; color: #1976d2; font-size: 1.1em; }
+        .produkt-info { color: #333; margin-top: 4px; }
         
-        .input-vaha { width: 70px; padding: 8px; border: 1px solid #1976d2; border-radius: 5px; font-weight: bold; }
-        .btn-save { background: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .dluh { color: red; font-weight: bold; }
+        .vaha-objednano { font-size: 1.3em; font-weight: 900; color: #d32f2f; text-align: center; }
+        
+        input[type="number"] { width: 80px; padding: 10px; border: 2px solid #1976d2; border-radius: 5px; font-weight: bold; font-size: 1em; }
+        
+        .btn-hotovo { background: #2e7d32; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; text-transform: uppercase; }
+        .btn-hotovo:active { background: #1b5e20; transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-<nav>
-    <a href="index.html">📦 OBJEDNÁVKY</a>
-    <a href="rozpis.html" style="text-decoration: underline;">⚖️ VÁŽENÍ</a>
-    <a href="finance.html">💰 FINANCE</a>
-</nav>
-
-<div class="container">
-    <h2 style="text-align:center;">⚖️ ROZPIS VÁŽENÍ</h2>
-
-    <div id="vypis-sumar-root"></div>
-
-    <div id="vypis-zbozi">Načítám data...</div>
+<div class="hlavicka">
+    <h2 style="margin:0;">⚖️ VÁŽENÍ U UDÍRNY</h2>
+    <a href="admin.html">ZPĚT DO MENU</a>
 </div>
+
+<table>
+    <thead>
+        <tr>
+            <th>KDO / CO</th>
+            <th style="text-align:center;">OBJEDNÁNO</th>
+            <th>REÁLNÁ VÁHA (g)</th>
+            <th>AKCE</th>
+        </tr>
+    </thead>
+    <tbody id="obsah-tabulky">
+        <tr><td colspan="4" style="text-align:center; padding:30px;">Načítám objednávky...</td></tr>
+    </tbody>
+</table>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let cenyZbozi = {};
 
-    db.ref("produkty").on("value", (snap) => {
-        cenyZbozi = snap.val() || {};
-        nactiData();
+    db.ref("objednavky").on("value", (snap) => {
+        const objednavky = snap.val() || {};
+        const tbody = document.getElementById("obsah-tabulky");
+        tbody.innerHTML = "";
+
+        for (let id in objednavky) {
+            const obj = objednavky[id];
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>
+                    <div class="zakaznik-info">${obj.zakaznik}</div>
+                    <div class="produkt-info">${obj.produkty}</div>
+                </td>
+                <td class="vaha-objednano">
+                    ${obj.vaha} <small>kg</small>
+                </td>
+                <td>
+                    <input type="number" 
+                           placeholder="gramy" 
+                           value="${obj.skutecna_vaha_gr || ''}" 
+                           oninput="ulozVahu('${id}', this.value)"> <small>g</small>
+                </td>
+                <td>
+                    <button class="btn-hotovo" onclick="odbavit('${id}', '${obj.zakaznik}')">HOTOVO</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        if (Object.keys(objednavky).length === 0) {
+            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:40px; color:#999;'>Vše je zváženo a vyřízeno! 🥓</td></tr>";
+        }
     });
 
-    function nactiData() {
-        db.ref("objednavky").on("value", (snap) => {
-            const data = snap.val();
-            const divZbozi = document.getElementById("vypis-zbozi");
-            const divSumarRoot = document.getElementById("vypis-sumar-root");
-            if (!data) { divZbozi.innerHTML = "Žádné objednávky."; divSumarRoot.innerHTML = ""; return; }
-            
-            divZbozi.innerHTML = "";
-            let poJmenech = {}; let poZbozi = {};
-
-            for (let id in data) {
-                let o = data[id]; o.id = id;
-                if (!poJmenech[o.zakaznik]) poJmenech[o.zakaznik] = { cena: 0, zaplaceno: 0 };
-                poJmenech[o.zakaznik].cena += (o.skutecna_cena || 0);
-                poJmenech[o.zakaznik].zaplaceno += (o.zaplaceno || 0);
-                if (!poZbozi[o.produkty]) poZbozi[o.produkty] = [];
-                poZbozi[o.produkty].push(o);
-            }
-
-            let sHtml = `<div class="sumar-box"><h3>💰 CELKEM K PLATBĚ</h3><table><tr><th>Zákazník</th><th>Cena celkem</th><th>Zaplaceno</th><th>Zbývá</th></tr>`;
-            for (let jm in poJmenech) {
-                let zb = poJmenech[jm].cena - poJmenech[jm].zaplaceno;
-                sHtml += `<tr><td><b>${jm}</b></td><td>${poJmenech[jm].cena} Kč</td><td>${poJmenech[jm].zaplaceno} Kč</td><td class="${zb>0?'dluh':''}"><b>${zb} Kč</b></td></tr>`;
-            }
-            divSumarRoot.innerHTML = sHtml + `</table></div>`;
-
-            for (let prod in poZbozi) {
-                let cenaKg = cenyZbozi[prod] || 0;
-                let html = `<div class="zbozi-sekce"><div class="zbozi-hlavicka"><span>📦 ${prod}</span><span>${cenaKg} Kč/kg</span></div><table>`;
-                poZbozi[prod].forEach(obj => {
-                    html += `<tr><td><b>${obj.zakaznik}</b></td>
-                        <td><input type="number" class="input-vaha" value="${obj.skutecna_vaha_gr||''}" oninput="zivaCena('${obj.id}', this.value, ${cenaKg})" id="gr-${obj.id}"> gr</td>
-                        <td id="disp-${obj.id}"><b>${obj.skutecna_cena || 0} Kč</b></td>
-                        <td>Dostal: <input type="number" style="width:70px;" value="${obj.zaplaceno||0}" id="pay-${obj.id}"> Kč</td>
-                        <td><button class="btn-save" onclick="uloz('${obj.id}', ${cenaKg}, '${prod}')">ULOŽIT</button></td></tr>`;
-                });
-                divZbozi.innerHTML += html + `</table></div>`;
-            }
-        });
+    // Uloží průběžně gramy do databáze
+    function ulozVahu(id, vaha) {
+        db.ref("objednavky/" + id).update({ skutecna_vaha_gr: parseInt(vaha) || 0 });
     }
 
-    function uloz(id, cenaKg, nazevZbozi) {
-        const gr = parseInt(document.getElementById(`gr-${id}`).value) || 0;
-        const pay = parseInt(document.getElementById(`pay-${id}`).value) || 0;
-        const cena = Math.round((gr / 1000) * cenaKg);
-        db.ref("objednavky/" + id).once("value").then((snap) => {
-            const d = snap.val();
-            const rozdilVaha = gr - (d.skutecna_vaha_gr || 0);
-            const rozdilPlatba = pay - (d.zaplaceno || 0);
-            db.ref("objednavky/" + id).update({ skutecna_vaha_gr: gr, skutecna_cena: cena, zaplaceno: pay });
-            if (rozdilVaha !== 0) db.ref("statistiky/vahy/" + nazevZbozi).transaction(c => (c || 0) + rozdilVaha);
-            if (rozdilPlatba !== 0) db.ref("statistiky/trzby_celkem").transaction(c => (c || 0) + rozdilPlatba);
-        });
-    }
-
-    function zivaCena(id, gramy, cenaKg) {
-        document.getElementById("disp-" + id).innerText = Math.round((gramy / 1000) * cenaKg) + " Kč";
+    // Smaže objednávku po kliknutí na HOTOVO
+    function odbavit(id, jmeno) {
+        if (confirm("Odbavit zákazníka " + jmeno + "? Objednávka zmizí.")) {
+            db.ref("objednavky/" + id).remove();
+        }
     }
 </script>
+
 </body>
 </html>
