@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expedice - Rozpis vážení</title>
+    <title>Expedice - Rozpis</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -20,19 +20,19 @@
         .btn-ok { background: #2e7d32; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-smazat { background: #fff; border: 1px solid #d32f2f; color: #d32f2f; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: auto; }
         
-        /* Stav po uložení */
-        .karta.hotovo { border-left-color: #888; background: #f9f9f9; opacity: 0.8; }
-        .btn-ok.is-hotovo { background: #888 !important; }
+        /* Styl pro uložený stav */
+        .karta.hotovo { border-left-color: #888; background: #f9f9f9; opacity: 0.7; }
+        .btn-ok.vypnuto { background: #888 !important; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2 id="nadpis">Rozpis</h2>
+        <h2 id="nadpis">Načítám...</h2>
         <a href="admin.html" style="font-weight:bold; color:#1976d2; text-decoration:none;">ZPĚT</a>
     </div>
 
-    <div class="container" id="seznam"></div>
+    <div id="seznam"></div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -49,7 +49,7 @@
     db.ref("produkty/" + filtr).once("value", (s) => {
         cenaZaKg = s.val() || 0;
         
-        // 2. Sledovat objednávky
+        // 2. Načíst objednávky
         db.ref("objednavky/" + filtr).on("value", (snap) => {
             if (document.activeElement.tagName === "INPUT") return;
             const data = snap.val() || {};
@@ -66,12 +66,12 @@
                 vypis.innerHTML += `
                     <div class="karta ${jeHotovo ? 'hotovo' : ''}">
                         <span class="jmeno">${obj.zakaznik}</span>
-                        <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano || 0} kg</span>
+                        <span class="chce">MÁ OBJEDNÁNO: ${obj.vaha_objednano || 0} kg</span>
                         
                         <div class="radek">
                             <div class="polozka">
                                 <label>GRAMY</label>
-                                <input type="number" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="ulozZmenu('${id}','skutecna_vaha_gr',this.value)">
+                                <input type="number" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="ulozDoDB('${id}','skutecna_vaha_gr',this.value)">
                             </div>
                             <div class="polozka">
                                 <label>CENA</label>
@@ -79,9 +79,9 @@
                             </div>
                             <div class="polozka">
                                 <label>ZAPLACENO</label>
-                                <input type="number" id="z-${id}" value="${zapl || ''}" onchange="ulozZmenu('${id}','zaplaceno',this.value)">
+                                <input type="number" id="z-${id}" value="${zapl || ''}" onchange="ulozDoDB('${id}','zaplaceno',this.value)">
                             </div>
-                            <button class="btn-ok ${jeHotovo ? 'is-hotovo' : ''}" onclick="potvrdit('${id}','${obj.zakaznik}')">
+                            <button class="btn-ok ${jeHotovo ? 'vypnuto' : ''}" onclick="potvrdit('${id}','${obj.zakaznik}')">
                                 ${jeHotovo ? 'ULOŽENO ✓' : 'OK / ULOŽIT'}
                             </button>
                             <button class="btn-smazat" onclick="smazat('${id}')">SMAZAT</button>
@@ -96,7 +96,7 @@
         document.getElementById("c-" + id).innerText = Math.round((v / 1000) * cenaZaKg);
     }
 
-    function ulozZmenu(id, pole, hodnota) {
+    function ulozDoDB(id, pole, hodnota) {
         db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(hodnota) || 0 });
     }
 
@@ -105,20 +105,24 @@
     }
 
     function potvrdit(id, jm) {
-        const kPlaceni = parseInt(document.getElementById("c-" + id).innerText) || 0;
         const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
-        const dluh = kPlaceni - zaplaceno;
+        const vaha = parseInt(document.getElementById("v-" + id).value) || 0;
         const dnes = new Date().toLocaleDateString();
 
-        // Uložení stavu POTVRZENO přímo do objednávky (aby to zůstalo šedé)
-        db.ref("objednavky/" + filtr + "/" + id).update({ potvrzeno: true }).then(() => {
-            // Zápis tržby
+        // Uložení stavu, aby tlačítko zůstalo šedé
+        db.ref("objednavky/" + filtr + "/" + id).update({ 
+            potvrzeno: true,
+            skutecna_vaha_gr: vaha,
+            zaplaceno: zaplaceno
+        }).then(() => {
+            // Zápis do tržeb (původní funkční cesta pro Admin)
             if (zaplaceno > 0) {
-                db.ref("finance/trzby").push({ zakaznik: jm, castka: zaplaceno, datum: dnes, produkt: filtr });
-            }
-            // Zápis dluhu
-            if (dluh > 0) {
-                db.ref("dluhy").push({ jmeno: jm, castka: dluh, datum: dnes, zbozi: filtr });
+                db.ref("finance/trzby").push({
+                    zakaznik: jm,
+                    castka: zaplaceno,
+                    datum: dnes,
+                    produkt: filtr
+                });
             }
             alert("Uloženo!");
         });
