@@ -106,12 +106,13 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // SPRÁVNÉ ČÍSLO ÚČTU BEZ PŘEDČÍSLÍ: 492390227/0100
-            const cisloUctu = "492390227";
-            const kodBanky = "0100";
+            // FORMÁT PRO BANKU S PŘEDČÍSLÍM 115
+            // Předčíslí musí mít 6 míst (000115), hlavní účet 10 míst (0492390227)
+            const predcisli = "000115";
+            const ucet = "0492390227";
+            const banka = "0100";
             
-            // SPD formát s vysokou kompatibilitou
-            const spdText = "SPD*1.0*ACC:" + cisloUctu + "/" + kodBanky + "*AM:" + castka + ".00*CUR:CZK";
+            const spdText = "SPD*1.0*ACC:" + predcisli + ucet + banka + "*AM:" + castka + ".00*CUR:CZK";
             
             new QRCode(place, {
                 text: spdText,
