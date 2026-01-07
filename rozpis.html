@@ -47,10 +47,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVŮJ IBAN (Vypočítáno z 115-4962390227/0100)
-    // Toto je jediný 100% formát čitelný všemi bankami
-    const MOJE_IBAN = "CZ0401000001154962390227";
-
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
     document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis vážení";
@@ -109,21 +105,28 @@
     function zobrazQR(id, castka) {
         const wrap = document.getElementById("qr-wrap-" + id);
         const place = document.getElementById("qr-place-" + id);
+        
         if (wrap.style.display === "block") {
             wrap.style.display = "none";
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // FORMÁT SPD PRO IBAN - Nejpoužívanější standard v ČR
-            const spdText = "SPD*1.0*ACC:" + MOJE_IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            // POUŽIJEME KLASICKÝ FORMÁT PŘEDČÍSLÍ-ČÍSLO/BANKA (Český standard)
+            // Žádné doplňování nul, prostě tak, jak to píše banka.
+            const ucet = "115-4962390227/0100";
+            
+            // Text kódu: SPD*verze*ACC:ucet*AM:castka*CUR:mena
+            // Pozor: Částka u SPD musí být bez mezer a s tečkou jako oddělovačem
+            const spd = "SPD*1.0*ACC:" + ucet + "*AM:" + castka + ".00*CUR:CZK";
             
             new QRCode(place, {
-                text: spdText,
+                text: spd,
                 width: 120,
                 height: 120,
                 correctLevel : QRCode.CorrectLevel.M
             });
+            
             wrap.style.display = "block";
         }
     }
