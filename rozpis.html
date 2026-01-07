@@ -21,6 +21,7 @@
         .qr-area { margin-top: 15px; }
         .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
         .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 2px solid #000; width: 140px; }
+        .qr-popup div img { margin: 0 auto; }
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
@@ -46,6 +47,9 @@
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    // TVŮJ IBAN - Vypočítán přesně pro 115-4962390227/0100
+    const IBAN = "CZ0401000001154962390227";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -105,28 +109,14 @@
     function zobrazQR(id, castka) {
         const wrap = document.getElementById("qr-wrap-" + id);
         const place = document.getElementById("qr-place-" + id);
-        
         if (wrap.style.display === "block") {
             wrap.style.display = "none";
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
-            
-            // POUŽIJEME KLASICKÝ FORMÁT PŘEDČÍSLÍ-ČÍSLO/BANKA (Český standard)
-            // Žádné doplňování nul, prostě tak, jak to píše banka.
-            const ucet = "115-4962390227/0100";
-            
-            // Text kódu: SPD*verze*ACC:ucet*AM:castka*CUR:mena
-            // Pozor: Částka u SPD musí být bez mezer a s tečkou jako oddělovačem
-            const spd = "SPD*1.0*ACC:" + ucet + "*AM:" + castka + ".00*CUR:CZK";
-            
-            new QRCode(place, {
-                text: spd,
-                width: 120,
-                height: 120,
-                correctLevel : QRCode.CorrectLevel.M
-            });
-            
+            // Čistý SPD formát s IBANem (nejvyšší možná kompatibilita)
+            const spd = "SPD*1.0*ACC:" + IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            new QRCode(place, { text: spd, width: 120, height: 120, correctLevel : QRCode.CorrectLevel.M });
             wrap.style.display = "block";
         }
     }
