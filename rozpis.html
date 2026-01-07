@@ -10,27 +10,48 @@
     <style>
         :root { --primary: #1976d2; --success: #2e7d32; --danger: #d32f2f; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
-        .header { background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        
+        .header { 
+            background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 100; 
+        }
         .header h2 { margin: 0; color: var(--primary); text-transform: uppercase; font-size: 1.2rem; }
         .btn-zpet { text-decoration: none; color: #666; font-weight: bold; border: 1px solid #ccc; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; background: #fff; }
+
         .container { max-width: 1100px; margin: 20px auto; padding: 0 10px; }
-        .karta { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary); }
+
+        .karta { 
+            background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; 
+            gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary);
+        }
+
         .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
         .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
+
+        /* QR AREA */
         .qr-area { margin-top: 15px; }
         .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
         .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 2px solid #000; width: 140px; }
+        .qr-popup div img { margin: 0 auto; }
+
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
+        
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
         .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
+
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
+
         .akce-box { display: flex; gap: 8px; }
         .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1b5e20; }
         .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
         .btn-smazat { background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        .prazdno { text-align: center; padding: 60px; color: #aaa; background: white; border-radius: 15px; }
     </style>
 </head>
 <body>
@@ -47,9 +68,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVŮJ IBAN (Vypočítaný z 115-4962390227/0100)
-    // Toto je mezinárodní formát, který české banky u QR plateb preferují
-    const MUJ_IBAN = "CZ0401000001154962390227";
+    // TVŮJ ÚČET - formát pro QR: předčíslí(max 6)-číslo(max 10)
+    const PREDCISLI = "115";
+    const CISLO = "4962390227";
+    const BANKA = "0100";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -105,6 +127,7 @@
                         </div>
                     </div>`;
             }
+            if(vypis.innerHTML === "") vypis.innerHTML = '<div class="prazdno"><h3>Seznam je prázdný.</h3></div>';
         });
     });
 
@@ -118,8 +141,12 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // Standard QR platby s IBANem (nejvyšší kompatibilita)
-            const spdText = `SPD*1.0*ACC:${MUJ_IBAN}*AM:${castka}.00*CUR:CZK*MSG:Platba`;
+            // Národní formát: Předčíslí-Číslo/Banka
+            const ucetString = `${PREDCISLI}-${CISLO}/${BANKA}`;
+            
+            // SPD (Short Payment Descriptor)
+            // Přidána zpráva bez mezer a fixní desetinná místa
+            const spdText = `SPD*1.0*ACC:${ucetString}*AM:${castka}.00*CUR:CZK*MSG:Platba`;
             
             new QRCode(place, {
                 text: spdText,
@@ -162,7 +189,9 @@
     }
 
     function jenSmazat(id) {
-        db.ref("objednavky/" + filtr + "/" + id).remove();
+        if(confirm("Smazat?")) {
+            db.ref("objednavky/" + filtr + "/" + id).remove();
+        }
     }
 </script>
 </body>
