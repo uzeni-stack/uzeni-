@@ -20,8 +20,8 @@
         .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
         .qr-area { margin-top: 15px; }
         .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
-        .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 2px solid #000; width: 140px; }
-        .qr-popup div img { margin: 0 auto; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 160px; text-align: center; }
+        .qr-popup img { display: block; margin: 0 auto 10px; }
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
@@ -48,8 +48,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVŮJ IBAN - Vypočítán přesně pro 115-4962390227/0100
-    const IBAN = "CZ0401000001154962390227";
+    // Údaje pro platbu (vychází z 115-4962390227/0100)
+    const UCET_QR = "1154962390227";
+    const BANKA_QR = "0100";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -78,7 +79,7 @@
                                 <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
                                     <div id="qr-place-${id}"></div>
-                                    <center><small style="color:#666;font-size:10px">Naskenujte v bance</small></center>
+                                    <small style="color:#666;font-size:10px">Naskenujte v bance</small>
                                 </div>
                             </div>
                         </div>
@@ -114,9 +115,17 @@
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
-            // Čistý SPD formát s IBANem (nejvyšší možná kompatibilita)
-            const spd = "SPD*1.0*ACC:" + IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
-            new QRCode(place, { text: spd, width: 120, height: 120, correctLevel : QRCode.CorrectLevel.M });
+            
+            // Standardní SPD text pro české banky
+            const spdText = "SPD*1.0*ACC:" + UCET_QR + "/" + BANKA_QR + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            
+            // Vygenerování QR s vyšší odolností (H) a dostatečnou velikostí
+            new QRCode(place, {
+                text: spdText,
+                width: 140,
+                height: 140,
+                correctLevel : QRCode.CorrectLevel.H 
+            });
             wrap.style.display = "block";
         }
     }
