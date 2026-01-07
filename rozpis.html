@@ -26,6 +26,9 @@
             gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary);
         }
 
+        /* Styl pro potvrzenou kartu */
+        .karta.hotovo { border-left-color: #888; background: #fafafa; opacity: 0.8; }
+
         .info { flex: 1; min-width: 150px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
         .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
@@ -46,7 +49,9 @@
             box-shadow: 0 4px 0 #1b5e20;
         }
         .btn-ok:active { transform: translateY(2px); box-shadow: none; background: #1b5e20; }
-        .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
+        
+        /* Styl pro šedé tlačítko */
+        .btn-ok.ulozeno { background: #888 !important; box-shadow: 0 4px 0 #555 !important; pointer-events: none; }
 
         .btn-smazat { 
             background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; 
@@ -81,7 +86,7 @@
         cenaKg = s.val() || 0;
         
         db.ref("objednavky/" + filtr).on("value", (snap) => {
-            if (document.activeElement.tagName === "INPUT") return;
+            if (document.activeElement && document.activeElement.tagName === "INPUT") return;
             
             const data = snap.val() || {};
             const vypis = document.getElementById("seznam-lidi");
@@ -92,9 +97,10 @@
                 const vahaGr = obj.skutecna_vaha_gr || 0;
                 const zapl = obj.zaplaceno || 0;
                 const kPlaceni = Math.round((vahaGr / 1000) * cenaKg);
+                const hotovo = obj.potvrzeno === true;
 
                 vypis.innerHTML += `
-                    <div class="karta">
+                    <div class="karta ${hotovo ? 'hotovo' : ''}">
                         <div class="info">
                             <span class="jmeno">${obj.zakaznik}</span>
                             <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano} kg</span>
@@ -103,7 +109,7 @@
                             <label>GRAMY</label>
                             <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" 
                                    oninput="prepocitej('${id}')" 
-                                   onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
+                                   onchange="ulozDoDB('${id}','skutecna_vaha_gr',this.value)">
                         </div>
                         <div class="cena-box">
                             <label style="font-size:0.6rem">K PLACENÍ</label>
@@ -112,10 +118,12 @@
                         <div class="sloupec">
                             <label>ZAPLACENO</label>
                             <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" 
-                                   onchange="uloz('${id}','zaplaceno',this.value)">
+                                   onchange="ulozDoDB('${id}','zaplaceno',this.value)">
                         </div>
                         <div class="akce-box">
-                            <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">ULOŽIT / OK</button>
+                            <button class="btn-ok ${hotovo ? 'ulozeno' : ''}" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">
+                                ${hotovo ? 'ULOŽENO ✓' : 'ULOŽIT / OK'}
+                            </button>
                             <button class="btn-smazat" onclick="jenSmazat('${id}')" title="Odstranit kartu">🗑️</button>
                         </div>
                     </div>`;
@@ -128,47 +136,56 @@
         const g = document.getElementById("v-" + id).value || 0;
         const vysledek = Math.round((g / 1000) * cenaKg);
         document.getElementById("c-" + id).innerText = vysledek + " Kč";
-        // Pokud změní váhu, resetujeme tlačítko, aby mohl uložit znovu
+        
+        // Pokud změní váhu, dovolíme znovu uložit (kdyby se spletl)
         const btn = document.getElementById("btn-ok-" + id);
-        btn.innerText = "ULOŽIT / OK";
-        btn.classList.remove("ulozeno");
+        if(btn.classList.contains("ulozeno")) {
+            btn.innerText = "AKTUALIZOVAT";
+            btn.classList.remove("ulozeno");
+        }
     }
 
-    function uloz(id, pole, v) {
+    function ulozDoDB(id, pole, v) {
         db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(v) || 0 });
     }
 
     function potvrdit(id, jm) {
+        const vaha = parseInt(document.getElementById("v-" + id).value) || 0;
         const kPlaceni = parseInt(document.getElementById("c-" + id).innerText);
         const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
         const dluh = kPlaceni - zaplaceno;
-        
-        const dnes = new Date();
-        const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
+        const dnes = new Date().toLocaleDateString();
 
-        if (zaplaceno > 0) {
-            db.ref("finance/" + obdobi + "/trzby").push({ 
-                castka: zaplaceno, 
-                datum: dnes.toLocaleDateString(),
-                zakaznik: jm,
-                zbozi: filtr
-            });
-        }
+        // 1. Zápis stavu POTVRZENO přímo k zákazníkovi (aby to zůstalo šedé)
+        db.ref("objednavky/" + filtr + "/" + id).update({ 
+            potvrzeno: true,
+            skutecna_vaha_gr: vaha,
+            zaplaceno: zaplaceno
+        }).then(() => {
+            // 2. Zápis tržby - POSÍLÁME DO HLAVNÍCH FINANCÍ (aby to Admin viděl)
+            if (zaplaceno > 0) {
+                db.ref("finance/trzby").push({ 
+                    castka: zaplaceno, 
+                    datum: dnes,
+                    zakaznik: jm,
+                    zbozi: filtr
+                });
+            }
 
-        if (dluh > 0) {
-            db.ref("dluhy").push({ 
-                jmeno: jm, zbozi: filtr, castka: dluh, datum: dnes.toLocaleDateString() 
-            });
-        }
-
-        // Vizuální zpětná vazba - tlačítko zešedne a napíše ULOŽENO
-        const btn = document.getElementById("btn-ok-" + id);
-        btn.innerText = "ULOŽENO ✓";
-        btn.classList.add("ulozeno");
+            // 3. Zápis dluhu
+            if (dluh > 0) {
+                db.ref("dluhy").push({ 
+                    jmeno: jm, zbozi: filtr, castka: dluh, datum: dnes 
+                });
+            }
+            alert("Uloženo!");
+        });
     }
 
     function jenSmazat(id) {
-        db.ref("objednavky/" + filtr + "/" + id).remove();
+        if(confirm("Smazat tohoto zákazníka z rozpisu?")) {
+            db.ref("objednavky/" + filtr + "/" + id).remove();
+        }
     }
 </script>
 </body>
