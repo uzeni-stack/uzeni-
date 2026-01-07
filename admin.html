@@ -7,25 +7,33 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; --finance: #006064; }
+        :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; --finance: #00c853; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; }
         
-        .hlavicka { background: var(--primary); color: white; padding: 25px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .hlavicka h1 { margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 1.5rem; }
+        /* Horní lišta s tlačítkem vpravo */
+        .hlavicka { 
+            background: var(--primary); color: white; padding: 15px 25px; 
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+        }
+        .hlavicka h1 { margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 1.3rem; }
+
+        /* Nové tlačítko vpravo nahoře */
+        .btn-finance-top { 
+            background: var(--finance); color: white; text-decoration: none; 
+            padding: 10px 20px; border-radius: 8px; font-weight: bold; 
+            transition: 0.3s; border: 2px solid rgba(255,255,255,0.2);
+        }
+        .btn-finance-top:hover { background: #00e676; transform: scale(1.05); }
 
         #status-bar { background: #ffeb3b; color: #000; text-align: center; padding: 5px; font-size: 0.8rem; font-weight: bold; display: none; }
 
         .obsah { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         
-        .sidebar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); align-self: start; display: flex; flex-direction: column; gap: 10px; }
-        .sidebar h3 { margin-top: 0; color: var(--primary); font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 5px; }
+        .sidebar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); align-self: start; }
+        .sidebar h3 { margin-top: 0; color: var(--primary); font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
         
-        /* Tlačítko Finance */
-        .btn-finance { background: var(--finance); color: white; text-decoration: none; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px; display: block; transition: 0.3s; box-shadow: 0 4px 0 #00363a; }
-        .btn-finance:hover { background: #00838f; transform: translateY(-2px); }
-        .btn-finance:active { transform: translateY(2px); box-shadow: none; }
-
-        .polozka-box { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+        .polozka-box { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .polozka-listu { flex: 1; padding: 12px 15px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: #333; font-weight: bold; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .polozka-listu:hover { background: #e3f2fd; border-color: #1976d2; color: #1976d2; }
         
@@ -49,7 +57,7 @@
         input { padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; }
         .btn-pridat { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
 
-        @media (max-width: 800px) { .obsah { grid-template-columns: 1fr; } }
+        @media (max-width: 800px) { .obsah { grid-template-columns: 1fr; } .hlavicka { flex-direction: column; gap: 10px; } }
     </style>
 </head>
 <body>
@@ -58,12 +66,11 @@
 
 <div class="hlavicka">
     <h1>ADMINISTRACE PRODEJE</h1>
+    <a href="finance.html" class="btn-finance-top">📊 ZISKY A FINANCE</a>
 </div>
 
 <div class="obsah">
     <div class="sidebar">
-        <a href="finance.html" class="btn-finance">📊 FINANCE A ZISKY</a>
-        
         <h3>📂 LISTY K VÁŽENÍ</h3>
         <div id="produkty-seznam">Načítám data...</div>
     </div>
