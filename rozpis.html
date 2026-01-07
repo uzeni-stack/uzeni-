@@ -6,7 +6,6 @@
     <title>Rozpis vážení - Expedice</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
         :root { --primary: #1976d2; --success: #2e7d32; --danger: #d32f2f; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
@@ -19,16 +18,15 @@
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 2px; color: #1a1a1a; }
         .objednano-info { color: #d32f2f; font-weight: bold; font-size: 1rem; margin-bottom: 10px; display: block; }
         .qr-area { margin-top: 5px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-qr { background: #000; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 220px; text-align: center; }
-        /* DŮLEŽITÉ PRO ČITELNOST */
-        canvas { max-width: 100% !important; height: auto !important; }
+        .qr-popup img { width: 200px; height: 200px; display: block; margin: 0 auto; }
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; }
-        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
+        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
         .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-ok.ulozeno { background: #aaa; }
     </style>
@@ -47,6 +45,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Tvůj IBAN
     const MUJ_IBAN = "CZ0601000001150492390227";
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -75,8 +74,8 @@
                             <div class="qr-area">
                                 <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
-                                    <canvas id="canvas-${id}"></canvas>
-                                    <div style="margin-top:5px; font-size:11px; color:#666;">Měna: CZK | Účet: KB</div>
+                                    <img id="qr-img-${id}" src="" alt="QR Platba">
+                                    <div style="margin-top:5px; font-size:11px; color:#666;">Standard SPD</div>
                                 </div>
                             </div>
                         </div>
@@ -102,21 +101,17 @@
 
     function zobrazQR(id, castka) {
         const wrap = document.getElementById("qr-wrap-" + id);
+        const img = document.getElementById("qr-img-" + id);
         if (wrap.style.display === "block") {
             wrap.style.display = "none";
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
-            const spdText = "SPD*1.0*ACC:" + MUJ_IBAN + "*AM:" + castka + ".00*CUR:CZK";
             
-            // GENERUJEME NA CANVAS (mnohem čitelnější pro mobily)
-            QRCode.toCanvas(document.getElementById('canvas-' + id), spdText, {
-                width: 200,
-                margin: 2,
-                errorCorrectionLevel: 'M'
-            }, function (error) {
-                if (error) console.error(error);
-                wrap.style.display = "block";
-            });
+            // POUŽITÍ EXTERNÍHO GENERÁTORU (vždy správný formát)
+            const qrUrl = `https://api.paylibo.com/paylibo/generator/czech/image?accountNumber=${MUJ_IBAN}&amount=${castka}.00&currency=CZK&message=Platba&size=200`;
+            
+            img.src = qrUrl;
+            wrap.style.display = "block";
         }
     }
 
@@ -139,8 +134,9 @@
         if (zaplaceno > 0) {
             db.ref("finance/" + obdobi + "/trzby").push({ castka: zaplaceno, datum: dnes.toLocaleDateString(), zakaznik: jm, zbozi: filtr });
         }
-        document.getElementById("btn-ok-" + id).innerText = "ULOŽENO";
-        document.getElementById("btn-ok-" + id).classList.add("ulozeno");
+        const btn = document.getElementById("btn-ok-" + id);
+        btn.innerText = "ULOŽENO";
+        btn.classList.add("ulozeno");
     }
 </script>
 </body>
