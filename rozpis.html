@@ -7,34 +7,31 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f9; margin: 0; padding: 10px; }
-        .header { background: #fff; padding: 15px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index:10; }
-        .karta { background: white; border-radius: 8px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid #1976d2; }
-        .jmeno { font-size: 1.3rem; font-weight: bold; }
-        .chce { color: #d32f2f; font-weight: bold; display: block; margin: 5px 0 10px 0; font-size: 0.9rem; }
-        .radek { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
+        .header { background: #fff; padding: 15px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; }
+        .karta { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #1976d2; }
+        .jmeno { font-size: 1.2rem; font-weight: bold; display: block; }
+        .chce { color: #d32f2f; font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; display: block; }
+        .radek { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .polozka { display: flex; flex-direction: column; }
         label { font-size: 0.7rem; color: #666; font-weight: bold; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 1.1rem; width: 90px; text-align: center; }
-        .cena-cislo { font-size: 1.5rem; font-weight: bold; color: #d32f2f; }
-        .btn-ok { background: #2e7d32; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-smazat { background: #fff; border: 1px solid #d32f2f; color: #d32f2f; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: auto; }
-        
-        /* Styl pro uložený stav */
-        .karta.hotovo { border-left-color: #888; background: #f9f9f9; opacity: 0.7; }
-        .btn-ok.vypnuto { background: #888 !important; pointer-events: none; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; width: 80px; text-align: center; }
+        .cena { font-size: 1.3rem; font-weight: bold; color: #d32f2f; min-width: 60px; }
+        .btn-ok { background: #2e7d32; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-smazat { background: #fff; border: 1px solid #d32f2f; color: #d32f2f; padding: 8px; border-radius: 5px; cursor: pointer; margin-left: auto; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2 id="nadpis">Načítám...</h2>
+        <h2 id="nadpis">Rozpis</h2>
         <a href="admin.html" style="font-weight:bold; color:#1976d2; text-decoration:none;">ZPĚT</a>
     </div>
 
     <div id="seznam"></div>
 
 <script>
+    // TVÉ PŘIPOJENÍ
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -45,11 +42,11 @@
 
     let cenaZaKg = 0;
 
-    // 1. Načíst cenu produktu
+    // 1. Načtení ceny produktu
     db.ref("produkty/" + filtr).once("value", (s) => {
         cenaZaKg = s.val() || 0;
         
-        // 2. Načíst objednávky
+        // 2. Načtení objednávek
         db.ref("objednavky/" + filtr).on("value", (snap) => {
             if (document.activeElement.tagName === "INPUT") return;
             const data = snap.val() || {};
@@ -61,29 +58,25 @@
                 const vahaGr = obj.skutecna_vaha_gr || 0;
                 const zapl = obj.zaplaceno || 0;
                 const celkem = Math.round((vahaGr / 1000) * cenaZaKg);
-                const jeHotovo = obj.potvrzeno === true;
 
                 vypis.innerHTML += `
-                    <div class="karta ${jeHotovo ? 'hotovo' : ''}">
+                    <div class="karta">
                         <span class="jmeno">${obj.zakaznik}</span>
-                        <span class="chce">MÁ OBJEDNÁNO: ${obj.vaha_objednano || 0} kg</span>
-                        
+                        <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano || 0} kg</span>
                         <div class="radek">
                             <div class="polozka">
-                                <label>GRAMY</label>
-                                <input type="number" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="ulozDoDB('${id}','skutecna_vaha_gr',this.value)">
+                                <label>VÁHA (g)</label>
+                                <input type="number" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                             </div>
                             <div class="polozka">
                                 <label>CENA</label>
-                                <span class="cena-cislo"><span id="c-${id}">${celkem}</span> Kč</span>
+                                <span class="cena" id="c-${id}">${celkem}</span>
                             </div>
                             <div class="polozka">
                                 <label>ZAPLACENO</label>
-                                <input type="number" id="z-${id}" value="${zapl || ''}" onchange="ulozDoDB('${id}','zaplaceno',this.value)">
+                                <input type="number" id="z-${id}" value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
                             </div>
-                            <button class="btn-ok ${jeHotovo ? 'vypnuto' : ''}" onclick="potvrdit('${id}','${obj.zakaznik}')">
-                                ${jeHotovo ? 'ULOŽENO ✓' : 'OK / ULOŽIT'}
-                            </button>
+                            <button class="btn-ok" onclick="potvrdit('${id}','${obj.zakaznik}')">OK</button>
                             <button class="btn-smazat" onclick="smazat('${id}')">SMAZAT</button>
                         </div>
                     </div>`;
@@ -96,36 +89,29 @@
         document.getElementById("c-" + id).innerText = Math.round((v / 1000) * cenaZaKg);
     }
 
-    function ulozDoDB(id, pole, hodnota) {
+    function uloz(id, pole, hodnota) {
         db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(hodnota) || 0 });
     }
 
     function smazat(id) {
-        if(confirm("Opravdu smazat?")) db.ref("objednavky/" + filtr + "/" + id).remove();
+        if(confirm("Smazat?")) db.ref("objednavky/" + filtr + "/" + id).remove();
     }
 
     function potvrdit(id, jm) {
         const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
-        const vaha = parseInt(document.getElementById("v-" + id).value) || 0;
         const dnes = new Date().toLocaleDateString();
 
-        // Uložení stavu, aby tlačítko zůstalo šedé
-        db.ref("objednavky/" + filtr + "/" + id).update({ 
-            potvrzeno: true,
-            skutecna_vaha_gr: vaha,
-            zaplaceno: zaplaceno
-        }).then(() => {
-            // Zápis do tržeb (původní funkční cesta pro Admin)
-            if (zaplaceno > 0) {
-                db.ref("finance/trzby").push({
-                    zakaznik: jm,
-                    castka: zaplaceno,
-                    datum: dnes,
-                    produkt: filtr
-                });
-            }
-            alert("Uloženo!");
-        });
+        if (zaplaceno > 0) {
+            db.ref("finance/trzby").push({
+                zakaznik: jm,
+                castka: zaplaceno,
+                datum: dnes,
+                produkt: filtr
+            });
+            alert("Uloženo do financí!");
+        } else {
+            alert("Zadej zaplacenou částku!");
+        }
     }
 </script>
 </body>
