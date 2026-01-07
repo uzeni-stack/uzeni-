@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance - Měsíční přehled</title>
+    <title>Finance - Přehled období</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -13,9 +13,8 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         
-        /* Přepínač měsíců */
         .mesic-nav { display: flex; align-items: center; gap: 15px; background: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 20px; justify-content: center; }
-        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; }
+        select { padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; cursor: pointer; }
 
         .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .stat-box { padding: 15px; border-radius: 10px; text-align: center; color: white; }
@@ -25,15 +24,15 @@
         .stat-val { font-size: 1.5rem; font-weight: 900; display: block; }
         
         .form-group { display: flex; gap: 10px; margin-top: 10px; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; flex: 1; }
-        .btn-add { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; flex: 1; }
+        .btn-add { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        .btn-reset { background: #555; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .btn-reset { background: #555; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
         .btn-reset:hover { background: #000; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; font-size: 0.8rem; color: #666; padding: 10px; border-bottom: 2px solid #eee; }
-        td { padding: 10px; border-bottom: 1px solid #eee; }
+        td { padding: 12px 10px; border-bottom: 1px solid #eee; }
         .text-danger { color: var(--danger); font-weight: bold; }
         .btn-del { color: #ccc; border: none; background: none; cursor: pointer; font-size: 1.2rem; }
     </style>
@@ -43,12 +42,12 @@
 <div class="container">
     <div class="header">
         <h1>📊 Finance a Zisky</h1>
-        <button class="btn-reset" onclick="vynulovatData()">⚠️ VYNULOVAT VŠE</button>
-        <a href="admin.html" style="text-decoration:none; color:#666; font-weight:bold;">← ZPĚT</a>
+        <button class="btn-reset" onclick="vynulovatData()">⚠️ VYNULOVAT OBDOBÍ</button>
+        <a href="admin.html" style="text-decoration:none; color:#666; font-weight:bold; border:1px solid #ccc; padding:8px 15px; border-radius:8px;">← ZPĚT</a>
     </div>
 
     <div class="mesic-nav">
-        <span>Zobrazit období:</span>
+        <span>Vyberte měsíc pro správu:</span>
         <select id="select-mesic" onchange="nactiData()">
             </select>
     </div>
@@ -69,9 +68,9 @@
     </div>
 
     <div class="card">
-        <h3>➕ Přidat náklad</h3>
+        <h3>➕ Přidat náklad (nákup zboží, doprava apod.)</h3>
         <div class="form-group">
-            <input type="text" id="naklad-co" placeholder="Za co...">
+            <input type="text" id="naklad-co" placeholder="Za co (např. Nákup masa)">
             <input type="number" id="naklad-kolik" placeholder="Kč">
             <button class="btn-add" onclick="pridatNaklad()">ULOŽIT</button>
         </div>
@@ -91,15 +90,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Vygenerování měsíců do selectu (aktuální měsíc + 5 zpět)
+    // Vygenerování měsíců: Aktuální + 11 dopředu
     const select = document.getElementById("select-mesic");
     const mesiceNazvy = ["Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"];
     const dnes = new Date();
     
     for(let i = 0; i < 12; i++) {
-        let m = dnes.getMonth() - i;
+        let m = dnes.getMonth() + i;
         let r = dnes.getFullYear();
-        if (m < 0) { m += 12; r -= 1; }
+        if (m > 11) { r += Math.floor(m / 12); m = m % 12; }
         let val = (m + 1) + "_" + r;
         let opt = document.createElement("option");
         opt.value = val;
@@ -110,7 +109,6 @@
     function nactiData() {
         const obdobi = document.getElementById("select-mesic").value;
         
-        // Načtení tržeb pro daný měsíc
         db.ref("finance/" + obdobi + "/trzby").on("value", (snap) => {
             let trzby = 0;
             const data = snap.val() || {};
@@ -119,7 +117,6 @@
             aktualizujZisk();
         });
 
-        // Načtení nákladů pro daný měsíc
         db.ref("finance/" + obdobi + "/naklady").on("value", (snap) => {
             let naklady = 0;
             const div = document.getElementById("seznam-nakladu");
@@ -160,7 +157,7 @@
     }
 
     function vynulovatData() {
-        if(confirm("OPRAVDU VYNULOVAT? Smaže to tržby i náklady pro aktuálně vybraný měsíc!")) {
+        if(confirm("POZOR! Smazat kompletní historii tržeb a nákladů pro toto vybrané období?")) {
             const obdobi = document.getElementById("select-mesic").value;
             db.ref("finance/" + obdobi).remove();
         }
