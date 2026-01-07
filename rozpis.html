@@ -3,115 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expedice - Rozpis</title>
+    <title>Rozpis vážení - Expedice</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
-        .header { background: #fff; padding: 15px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; }
-        .karta { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #1976d2; }
-        .jmeno { font-size: 1.2rem; font-weight: bold; display: block; }
-        .chce { color: #d32f2f; font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; display: block; }
-        .radek { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .polozka { display: flex; flex-direction: column; }
-        label { font-size: 0.7rem; color: #666; font-weight: bold; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; width: 80px; text-align: center; }
-        .cena { font-size: 1.3rem; font-weight: bold; color: #d32f2f; min-width: 60px; }
-        .btn-ok { background: #2e7d32; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-smazat { background: #fff; border: 1px solid #d32f2f; color: #d32f2f; padding: 8px; border-radius: 5px; cursor: pointer; margin-left: auto; }
+        :root { --primary: #1976d2; --success: #2e7d32; --danger: #d32f2f; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
+        
+        .header { 
+            background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 100; 
+        }
+        .header h2 { margin: 0; color: var(--primary); text-transform: uppercase; font-size: 1.2rem; }
+        .btn-zpet { text-decoration: none; color: #666; font-weight: bold; border: 1px solid #ccc; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; background: #fff; }
+
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 10px; }
+
+        .karta { 
+            background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; 
+            gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary);
+        }
+
+        .info { flex: 1; min-width: 150px; }
+        .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
+        .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
+
+        .sloupec { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
+        
+        .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
+        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
+
+        .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
+        .cena-cislo { font-size: 1.6rem; font-weight: 900; color: var(--danger); display: block; }
+
+        .akce-box { display: flex; gap: 8px; }
+        .btn-ok { 
+            background: var(--success); color: white; border: none; padding: 15px 25px; 
+            border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
+            box-shadow: 0 4px 0 #1b5e20;
+        }
+        .btn-ok:active { transform: translateY(2px); box-shadow: none; background: #1b5e20; }
+        .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
+
+        .btn-smazat { 
+            background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; 
+            border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .btn-smazat:hover { background: var(--danger); color: white; }
+
+        .prazdno { text-align: center; padding: 60px; color: #aaa; background: white; border-radius: 15px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2 id="nadpis">Rozpis</h2>
-        <a href="admin.html" style="font-weight:bold; color:#1976d2; text-decoration:none;">ZPĚT</a>
+        <h2 id="produkt-nadpis">Načítám...</h2>
+        <a href="admin.html" class="btn-zpet">ZPĚT DO ADMINA</a>
     </div>
 
-    <div id="seznam"></div>
+    <div class="container" id="seznam-lidi"></div>
 
 <script>
-    // TVÉ PŘIPOJENÍ
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
-    document.getElementById("nadpis").innerText = filtr || "Rozpis";
+    document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis vážení";
 
-    let cenaZaKg = 0;
+    let cenaKg = 0;
 
-    // 1. Načtení ceny produktu
     db.ref("produkty/" + filtr).once("value", (s) => {
-        cenaZaKg = s.val() || 0;
+        cenaKg = s.val() || 0;
         
-        // 2. Načtení objednávek
         db.ref("objednavky/" + filtr).on("value", (snap) => {
             if (document.activeElement.tagName === "INPUT") return;
+            
             const data = snap.val() || {};
-            const vypis = document.getElementById("seznam");
+            const vypis = document.getElementById("seznam-lidi");
             vypis.innerHTML = "";
 
             for (let id in data) {
                 const obj = data[id];
                 const vahaGr = obj.skutecna_vaha_gr || 0;
                 const zapl = obj.zaplaceno || 0;
-                const celkem = Math.round((vahaGr / 1000) * cenaZaKg);
+                const kPlaceni = Math.round((vahaGr / 1000) * cenaKg);
 
                 vypis.innerHTML += `
                     <div class="karta">
-                        <span class="jmeno">${obj.zakaznik}</span>
-                        <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano || 0} kg</span>
-                        <div class="radek">
-                            <div class="polozka">
-                                <label>VÁHA (g)</label>
-                                <input type="number" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
-                            </div>
-                            <div class="polozka">
-                                <label>CENA</label>
-                                <span class="cena" id="c-${id}">${celkem}</span>
-                            </div>
-                            <div class="polozka">
-                                <label>ZAPLACENO</label>
-                                <input type="number" id="z-${id}" value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
-                            </div>
-                            <button class="btn-ok" onclick="potvrdit('${id}','${obj.zakaznik}')">OK</button>
-                            <button class="btn-smazat" onclick="smazat('${id}')">SMAZAT</button>
+                        <div class="info">
+                            <span class="jmeno">${obj.zakaznik}</span>
+                            <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano} kg</span>
+                        </div>
+                        <div class="sloupec">
+                            <label>GRAMY</label>
+                            <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" 
+                                   oninput="prepocitej('${id}')" 
+                                   onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
+                        </div>
+                        <div class="cena-box">
+                            <label style="font-size:0.6rem">K PLACENÍ</label>
+                            <span class="cena-cislo" id="c-${id}">${kPlaceni} Kč</span>
+                        </div>
+                        <div class="sloupec">
+                            <label>ZAPLACENO</label>
+                            <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" 
+                                   onchange="uloz('${id}','zaplaceno',this.value)">
+                        </div>
+                        <div class="akce-box">
+                            <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">ULOŽIT / OK</button>
+                            <button class="btn-smazat" onclick="jenSmazat('${id}')" title="Odstranit kartu">🗑️</button>
                         </div>
                     </div>`;
             }
+            if(vypis.innerHTML === "") vypis.innerHTML = '<div class="prazdno"><h3>Seznam je prázdný.</h3></div>';
         });
     });
 
     function prepocitej(id) {
-        const v = document.getElementById("v-" + id).value || 0;
-        document.getElementById("c-" + id).innerText = Math.round((v / 1000) * cenaZaKg);
+        const g = document.getElementById("v-" + id).value || 0;
+        const vysledek = Math.round((g / 1000) * cenaKg);
+        document.getElementById("c-" + id).innerText = vysledek + " Kč";
+        // Pokud změní váhu, resetujeme tlačítko, aby mohl uložit znovu
+        const btn = document.getElementById("btn-ok-" + id);
+        btn.innerText = "ULOŽIT / OK";
+        btn.classList.remove("ulozeno");
     }
 
-    function uloz(id, pole, hodnota) {
-        db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(hodnota) || 0 });
-    }
-
-    function smazat(id) {
-        if(confirm("Smazat?")) db.ref("objednavky/" + filtr + "/" + id).remove();
+    function uloz(id, pole, v) {
+        db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(v) || 0 });
     }
 
     function potvrdit(id, jm) {
+        const kPlaceni = parseInt(document.getElementById("c-" + id).innerText);
         const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
-        const dnes = new Date().toLocaleDateString();
+        const dluh = kPlaceni - zaplaceno;
+        
+        const dnes = new Date();
+        const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
 
         if (zaplaceno > 0) {
-            db.ref("finance/trzby").push({
+            db.ref("finance/" + obdobi + "/trzby").push({ 
+                castka: zaplaceno, 
+                datum: dnes.toLocaleDateString(),
                 zakaznik: jm,
-                castka: zaplaceno,
-                datum: dnes,
-                produkt: filtr
+                zbozi: filtr
             });
-            alert("Uloženo do financí!");
-        } else {
-            alert("Zadej zaplacenou částku!");
         }
+
+        if (dluh > 0) {
+            db.ref("dluhy").push({ 
+                jmeno: jm, zbozi: filtr, castka: dluh, datum: dnes.toLocaleDateString() 
+            });
+        }
+
+        // Vizuální zpětná vazba - tlačítko zešedne a napíše ULOŽENO
+        const btn = document.getElementById("btn-ok-" + id);
+        btn.innerText = "ULOŽENO ✓";
+        btn.classList.add("ulozeno");
+    }
+
+    function jenSmazat(id) {
+        db.ref("objednavky/" + filtr + "/" + id).remove();
     }
 </script>
 </body>
