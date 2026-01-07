@@ -16,26 +16,31 @@
         .karta { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary); }
         .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 2px; color: #1a1a1a; }
-        .objednano-info { color: #d32f2f; font-weight: bold; font-size: 1rem; margin-bottom: 10px; display: block; }
+        
+        /* Viditelné objednané množství */
+        .objednano-info { color: #d32f2f; font-weight: bold; font-size: 1rem; margin-bottom: 10px; display: block; background: #fff1f1; padding: 5px; border-radius: 4px; border: 1px solid #ffcdd2; text-align: center; }
+        
         .qr-area { margin-top: 5px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 220px; text-align: center; }
+        .btn-qr { background: #000; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 230px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .qr-popup img { width: 200px; height: 200px; display: block; margin: 0 auto; }
+        
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; }
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
         .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
-        .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-ok.ulozeno { background: #aaa; }
+        .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #1b5e20; }
+        .btn-ok:active { transform: translateY(2px); box-shadow: 0 2px 0 #1b5e20; }
+        .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h2 id="produkt-nadpis">Načítám...</h2>
-        <a href="admin.html" class="btn-zpet">ZPĚT</a>
+        <a href="admin.html" class="btn-zpet">ZPĚT DO ADMINA</a>
     </div>
 
     <div class="container" id="seznam-lidi"></div>
@@ -45,11 +50,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Tvůj IBAN
+    // Tvůj IBAN pro KB
     const MUJ_IBAN = "CZ0601000001150492390227";
+    
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
-    document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis";
+    document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis vážení";
 
     let cenaKg = 0;
 
@@ -70,17 +76,20 @@
                     <div class="karta">
                         <div class="info">
                             <span class="jmeno">${obj.zakaznik}</span>
-                            <span class="objednano-info">Objednáno: ${obj.vaha_objednano || 0} kg</span>
+                            <span class="objednano-info">CHCETE: ${obj.vaha_objednano || 0} kg</span>
                             <div class="qr-area">
-                                <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
+                                <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">
+                                    <span>📱</span> ZOBRAZIT QR PLATBU
+                                </button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
-                                    <img id="qr-img-${id}" src="" alt="QR Platba">
-                                    <div style="margin-top:5px; font-size:11px; color:#666;">Standard SPD</div>
+                                    <img id="qr-img-${id}" src="" alt="Načítám QR kód...">
+                                    <div style="margin-top:8px; font-weight:bold; font-size:14px;">${kPlaceni} Kč</div>
+                                    <div style="font-size:10px; color:#666; margin-top:3px;">Certifikovaný formát s logem</div>
                                 </div>
                             </div>
                         </div>
                         <div class="sloupec">
-                            <label>GRAMY</label>
+                            <label>SKUTEČNÁ VÁHA (g)</label>
                             <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                         </div>
                         <div class="cena-box">
@@ -105,10 +114,10 @@
         if (wrap.style.display === "block") {
             wrap.style.display = "none";
         } else {
-            if (castka <= 0) { alert("Zadejte váhu!"); return; }
+            if (castka <= 0) { alert("Nejdříve zadejte váhu!"); return; }
             
-            // POUŽITÍ EXTERNÍHO GENERÁTORU (vždy správný formát)
-            const qrUrl = `https://api.paylibo.com/paylibo/generator/czech/image?accountNumber=${MUJ_IBAN}&amount=${castka}.00&currency=CZK&message=Platba&size=200`;
+            // POUŽITÍ SLUŽBY QR-PLATBA.CZ (generuje kód s logem)
+            const qrUrl = `https://api.paylibo.com/paylibo/generator/czech/image?accountNumber=${MUJ_IBAN}&amount=${castka}.00&currency=CZK&branding=true&size=250`;
             
             img.src = qrUrl;
             wrap.style.display = "block";
@@ -135,7 +144,7 @@
             db.ref("finance/" + obdobi + "/trzby").push({ castka: zaplaceno, datum: dnes.toLocaleDateString(), zakaznik: jm, zbozi: filtr });
         }
         const btn = document.getElementById("btn-ok-" + id);
-        btn.innerText = "ULOŽENO";
+        btn.innerText = "ULOŽENO ✓";
         btn.classList.add("ulozeno");
     }
 </script>
