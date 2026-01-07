@@ -33,7 +33,8 @@
         /* QR AREA */
         .qr-area { margin-top: 15px; }
         .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 1px solid #ccc; width: fit-content; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 2px solid #000; width: 170px; text-align: center; }
+        .qr-popup img { width: 150px; height: 150px; display: block; margin: 0 auto; }
 
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
@@ -66,9 +67,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVÉ ÚDAJE
-    const MOJE_UCET = "115-4962390227";
-    const MOJE_BANKA = "0100";
+    // TVÉ ÚDAJE (Bez pomlček pro jistotu bankovních aplikací)
+    const PREFIX = "115";
+    const CISLO_UCTU = "4962390227";
+    const BANKA = "0100";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -98,8 +100,8 @@
                             <div class="qr-area">
                                 <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
-                                    <img id="qr-img-${id}" src="" style="width:150px;height:150px;display:block">
-                                    <center><small>Naskenujte v bance</small></center>
+                                    <img id="qr-img-${id}" src="" alt="Načítám QR...">
+                                    <small style="color:#666">Naskenujte v bance</small>
                                 </div>
                             </div>
                         </div>
@@ -137,12 +139,12 @@
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             
-            // Sestavení textu pro QR platbu (Standard SPD)
-            const text = `SPD*1.0*ACC:${MOJE_UCET+MOJE_BANKA}*AM:${castka}*CUR:CZK*MSG:Platba`;
-            const encodedText = encodeURIComponent(text);
+            // PAYLIBO GENERÁTOR - Nejvíce kompatibilní s CZ bankami
+            // Formátujeme účet pro API (prefix-číslo/banka)
+            const ucetProApi = `${PREFIX}-${CISLO_UCTU}/${BANKA}`;
+            const qrUrl = `https://api.paylibo.com/paylibo/generator/czech/image?accountNumber=${PREFIX}${CISLO_UCTU}&bankCode=${BANKA}&amount=${castka}&currency=CZK&message=Platba`;
             
-            // Použití Google Charts API pro vygenerování čistého obrázku QR kódu
-            img.src = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodedText}&choe=UTF-8`;
+            img.src = qrUrl;
             wrap.style.display = "block";
         }
     }
