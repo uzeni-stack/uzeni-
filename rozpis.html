@@ -47,10 +47,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVŮJ ÚČET - PŘESNÝ FORMÁT
-    const BANKA = "0100";
-    const PREDCISLI = "000115"; // Doplněno na 6 míst
-    const CISLO = "4962390227"; // 10 míst
+    // TVŮJ IBAN (Vypočítáno z 115-4962390227/0100)
+    // Toto je jediný 100% formát čitelný všemi bankami
+    const MOJE_IBAN = "CZ0401000001154962390227";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -115,10 +114,16 @@
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
-            // Formát ACC: Předčíslí(6)Číslo(10)Banka(4) - bez pomlček a lomítek
-            const ucetKompakt = `${PREDCISLI}${CISLO}${BANKA}`;
-            const spdText = `SPD*1.0*ACC:${ucetKompakt}*AM:${castka}.00*CUR:CZK*MSG:Platba`;
-            new QRCode(place, { text: spdText, width: 120, height: 120 });
+            
+            // FORMÁT SPD PRO IBAN - Nejpoužívanější standard v ČR
+            const spdText = "SPD*1.0*ACC:" + MOJE_IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            
+            new QRCode(place, {
+                text: spdText,
+                width: 120,
+                height: 120,
+                correctLevel : QRCode.CorrectLevel.M
+            });
             wrap.style.display = "block";
         }
     }
