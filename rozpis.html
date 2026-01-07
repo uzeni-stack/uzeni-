@@ -33,8 +33,8 @@
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
         
-        .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; }
-        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
+        .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
+        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
 
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.6rem; font-weight: 900; color: var(--danger); display: block; }
@@ -43,7 +43,10 @@
         .btn-ok { 
             background: var(--success); color: white; border: none; padding: 15px 25px; 
             border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
+            box-shadow: 0 4px 0 #1b5e20;
         }
+        .btn-ok:active { transform: translateY(2px); box-shadow: none; }
+
         .btn-smazat { 
             background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 15px; 
             border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s;
@@ -63,6 +66,7 @@
     <div class="container" id="seznam-lidi"></div>
 
 <script>
+    // --- KONFIGURACE ---
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -73,11 +77,14 @@
 
     let cenaKg = 0;
 
+    // Načtení ceny produktu a následně objednávek
     db.ref("produkty/" + filtr).once("value", (s) => {
         cenaKg = s.val() || 0;
         
         db.ref("objednavky/" + filtr).on("value", (snap) => {
+            // Pokud uživatel zrovna píše do políčka, nepřekreslovat (prevence skákání kurzoru)
             if (document.activeElement.tagName === "INPUT") return;
+            
             const data = snap.val() || {};
             const vypis = document.getElementById("seznam-lidi");
             vypis.innerHTML = "";
@@ -95,7 +102,7 @@
                             <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano} kg</span>
                         </div>
                         <div class="sloupec">
-                            <label>GRAMY</label>
+                            <label>GRAMY (NA VÁZE)</label>
                             <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" 
                                    oninput="prepocitej('${id}')" 
                                    onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
@@ -105,13 +112,13 @@
                             <span class="cena-cislo" id="c-${id}">${kPlaceni} Kč</span>
                         </div>
                         <div class="sloupec">
-                            <label>ZAPLACENO</label>
+                            <label>ZAPLACENO (Kč)</label>
                             <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" 
                                    onchange="uloz('${id}','zaplaceno',this.value)">
                         </div>
                         <div class="akce-box">
                             <button class="btn-ok" onclick="potvrdit('${id}','${obj.zakaznik}')">HOTOVO / OK</button>
-                            <button class="btn-smazat" onclick="jenSmazat('${id}')" title="Smazat hned">🗑️</button>
+                            <button class="btn-smazat" onclick="jenSmazat('${id}')" title="Smazat bez uložení">🗑️</button>
                         </div>
                     </div>`;
             }
@@ -119,43 +126,52 @@
         });
     });
 
+    // Funkce pro okamžitý přepočet ceny při psaní gramů
     function prepocitej(id) {
         const g = document.getElementById("v-" + id).value || 0;
         const vysledek = Math.round((g / 1000) * cenaKg);
         document.getElementById("c-" + id).innerText = vysledek + " Kč";
     }
 
+    // Průběžné ukládání rozdělané práce do DB
     function uloz(id, pole, v) {
         db.ref("objednavky/" + filtr + "/" + id).update({ [pole]: parseInt(v) || 0 });
     }
 
+    // HLAVNÍ TLAČÍTKO: Potvrdí prodej, zapíše do měsíčních financí a případně vytvoří dluh
     function potvrdit(id, jm) {
         const kPlaceni = parseInt(document.getElementById("c-" + id).innerText);
         const zaplaceno = parseInt(document.getElementById("z-" + id).value) || 0;
         const dluh = kPlaceni - zaplaceno;
+        
+        const dnes = new Date();
+        const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
 
+        // 1. Zápis tržby do financí (pokud něco zaplatil)
         if (zaplaceno > 0) {
-            db.ref("historie_plateb").push({ 
+            db.ref("finance/" + obdobi + "/trzby").push({ 
                 castka: zaplaceno, 
-                datum: new Date().toLocaleDateString(),
+                datum: dnes.toLocaleDateString(),
                 zakaznik: jm,
                 zbozi: filtr
             });
         }
 
+        // 2. Zápis do dluhů (pokud zaplatil méně)
         if (dluh > 0) {
             db.ref("dluhy").push({ 
                 jmeno: jm, 
                 zbozi: filtr, 
                 castka: dluh, 
-                datum: new Date().toLocaleDateString() 
+                datum: dnes.toLocaleDateString() 
             });
         }
 
+        // 3. Odstranění z rozpisu
         db.ref("objednavky/" + filtr + "/" + id).remove();
     }
 
-    // SMAZÁNÍ BEZ PTÁNÍ
+    // TLAČÍTKO KOŠ: Okamžité smazání bez jakéhokoli zápisu nebo ptaní
     function jenSmazat(id) {
         db.ref("objednavky/" + filtr + "/" + id).remove();
     }
