@@ -106,19 +106,15 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // FORMÁT PRO BANKU S PŘEDČÍSLÍM 115
-            // Předčíslí musí mít 6 míst (000115), hlavní účet 10 míst (0492390227)
-            const predcisli = "000115";
-            const ucet = "0492390227";
-            const banka = "0100";
-            
-            const spdText = "SPD*1.0*ACC:" + predcisli + ucet + banka + "*AM:" + castka + ".00*CUR:CZK";
+            // PŘESNÝ FORMÁT DLE TVÉHO VZORU
+            const ucetSlozeny = "115-492390227/0100";
+            const spdText = "SPD*1.0*ACC:" + ucetSlozeny + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
             
             new QRCode(place, {
                 text: spdText,
-                width: 140,
-                height: 140,
-                correctLevel : QRCode.CorrectLevel.H
+                width: 150,
+                height: 150,
+                correctLevel : QRCode.CorrectLevel.M
             });
             wrap.style.display = "block";
         }
