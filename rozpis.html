@@ -26,14 +26,14 @@
             gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary);
         }
 
-        .info { flex: 1; min-width: 150px; }
+        .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
         .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
 
-        /* QR Platba Styly */
-        .qr-area { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem; }
-        .qr-popup { display: none; background: white; border: 1px solid #ddd; padding: 5px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        /* QR AREA */
+        .qr-area { margin-top: 15px; }
+        .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 1px solid #ccc; width: fit-content; }
 
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
@@ -42,22 +42,12 @@
         .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
 
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
-        .cena-cislo { font-size: 1.6rem; font-weight: 900; color: var(--danger); display: block; }
+        .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
 
         .akce-box { display: flex; gap: 8px; }
-        .btn-ok { 
-            background: var(--success); color: white; border: none; padding: 15px 25px; 
-            border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
-            box-shadow: 0 4px 0 #1b5e20;
-        }
-        .btn-ok:active { transform: translateY(2px); box-shadow: none; background: #1b5e20; }
+        .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1b5e20; }
         .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
-
-        .btn-smazat { 
-            background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; 
-            border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s;
-        }
-        .btn-smazat:hover { background: var(--danger); color: white; }
+        .btn-smazat { background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
         .prazdno { text-align: center; padding: 60px; color: #aaa; background: white; border-radius: 15px; }
     </style>
@@ -76,7 +66,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // NASTAVENÍ ÚČTU
+    // TVÉ ÚDAJE
     const MOJE_UCET = "115-4962390227";
     const MOJE_BANKA = "0100";
 
@@ -88,10 +78,8 @@
 
     db.ref("produkty/" + filtr).once("value", (s) => {
         cenaKg = s.val() || 0;
-        
         db.ref("objednavky/" + filtr).on("value", (snap) => {
             if (document.activeElement.tagName === "INPUT") return;
-            
             const data = snap.val() || {};
             const vypis = document.getElementById("seznam-lidi");
             vypis.innerHTML = "";
@@ -107,11 +95,11 @@
                         <div class="info">
                             <span class="jmeno">${obj.zakaznik}</span>
                             <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano} kg</span>
-                            
                             <div class="qr-area">
                                 <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
-                                    <img id="qr-img-${id}" src="" style="width:120px;height:120px;display:block">
+                                    <img id="qr-img-${id}" src="" style="width:150px;height:150px;display:block">
+                                    <center><small>Naskenujte v bance</small></center>
                                 </div>
                             </div>
                         </div>
@@ -122,7 +110,7 @@
                                    onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                         </div>
                         <div class="cena-box">
-                            <label style="font-size:0.6rem">K PLACENÍ</label>
+                            <label>K PLACENÍ</label>
                             <span class="cena-cislo" id="c-${id}">${kPlaceni} Kč</span>
                         </div>
                         <div class="sloupec">
@@ -131,12 +119,12 @@
                                    onchange="uloz('${id}','zaplaceno',this.value)">
                         </div>
                         <div class="akce-box">
-                            <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">ULOŽIT / OK</button>
+                            <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">OK</button>
                             <button class="btn-smazat" onclick="jenSmazat('${id}')">🗑️</button>
                         </div>
                     </div>`;
             }
-            if(vypis.innerHTML === "") vypis.innerHTML = '<div class="prazdno"><h3>Seznam je prázdný.</h3></div>';
+            if(vypis.innerHTML === "") vypis.innerHTML = '<div class="prazdno"><h3>Hotovo!</h3></div>';
         });
     });
 
@@ -147,10 +135,14 @@
         if (wrap.style.display === "block") {
             wrap.style.display = "none";
         } else {
-            if (castka <= 0) { alert("Nejdříve zadejte váhu!"); return; }
-            // API pro generování českého QR kódu
-            const url = `https://api.paylibo.com/paylibo/generator/czech/image?accountNumber=${MOJE_UCET}&bankCode=${MOJE_BANKA}&amount=${castka}&currency=CZK&message=Prodej%20zbozi`;
-            img.src = url;
+            if (castka <= 0) { alert("Zadejte váhu!"); return; }
+            
+            // Sestavení textu pro QR platbu (Standard SPD)
+            const text = `SPD*1.0*ACC:${MOJE_UCET+MOJE_BANKA}*AM:${castka}*CUR:CZK*MSG:Platba`;
+            const encodedText = encodeURIComponent(text);
+            
+            // Použití Google Charts API pro vygenerování čistého obrázku QR kódu
+            img.src = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodedText}&choe=UTF-8`;
             wrap.style.display = "block";
         }
     }
@@ -159,10 +151,6 @@
         const g = document.getElementById("v-" + id).value || 0;
         const vysledek = Math.round((g / 1000) * cenaKg);
         document.getElementById("c-" + id).innerText = vysledek + " Kč";
-        const btn = document.getElementById("btn-ok-" + id);
-        btn.innerText = "ULOŽIT / OK";
-        btn.classList.remove("ulozeno");
-        // Schovat starý QR kód při změně váhy
         document.getElementById("qr-wrap-" + id).style.display = "none";
     }
 
@@ -178,9 +166,7 @@
         const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
 
         if (zaplaceno > 0) {
-            db.ref("finance/" + obdobi + "/trzby").push({ 
-                castka: zaplaceno, datum: dnes.toLocaleDateString(), zakaznik: jm, zbozi: filtr
-            });
+            db.ref("finance/" + obdobi + "/trzby").push({ castka: zaplaceno, datum: dnes.toLocaleDateString(), zakaznik: jm, zbozi: filtr });
         }
         if (dluh > 0) {
             db.ref("dluhy").push({ jmeno: jm, zbozi: filtr, castka: dluh, datum: dnes.toLocaleDateString() });
