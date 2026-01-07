@@ -3,17 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance - Přehled období</title>
+    <title>Finance - Celkový přehled</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; }
+        :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; --total: #4527a0; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 20px; }
+        
+        /* Box pro celkový souhrn vpravo */
+        .total-summary { 
+            background: var(--total); color: white; padding: 15px 25px; border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: right; min-width: 200px;
+        }
+        .total-summary span { display: block; font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; }
+        .total-summary strong { font-size: 1.8rem; display: block; }
+
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         
-        .mesic-nav { display: flex; align-items: center; gap: 15px; background: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 20px; justify-content: center; }
+        .mesic-nav { display: flex; align-items: center; gap: 15px; background: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 20px; justify-content: center; border: 1px solid #ddd; }
         select { padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; cursor: pointer; }
 
         .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
@@ -27,57 +37,66 @@
         input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; flex: 1; }
         .btn-add { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        .btn-reset { background: #555; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
-        .btn-reset:hover { background: #000; }
+        .btn-reset { background: #555; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; margin-top: 5px; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; }
         th { text-align: left; font-size: 0.8rem; color: #666; padding: 10px; border-bottom: 2px solid #eee; }
         td { padding: 12px 10px; border-bottom: 1px solid #eee; }
         .text-danger { color: var(--danger); font-weight: bold; }
         .btn-del { color: #ccc; border: none; background: none; cursor: pointer; font-size: 1.2rem; }
+
+        @media (max-width: 600px) { .header-top { flex-direction: column; } .stats { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h1>📊 Finance a Zisky</h1>
-        <button class="btn-reset" onclick="vynulovatData()">⚠️ VYNULOVAT OBDOBÍ</button>
-        <a href="admin.html" style="text-decoration:none; color:#666; font-weight:bold; border:1px solid #ccc; padding:8px 15px; border-radius:8px;">← ZPĚT</a>
+    <div class="header-top">
+        <div>
+            <h1 style="margin:0">📊 Správa financí</h1>
+            <a href="admin.html" style="text-decoration:none; color:#1a237e; font-weight:bold; font-size: 0.9rem;">← ZPĚT DO ADMINA</a><br>
+            <button class="btn-reset" onclick="vynulovatData()">⚠️ VYNULOVAT VYBRANÝ MĚSÍC</button>
+        </div>
+        
+        <div class="total-summary">
+            <span>Celkový čistý zisk</span>
+            <strong id="celkova-bilance">0 Kč</strong>
+            <small style="font-size: 0.6rem; opacity: 0.7;">(Součet všech měsíců)</small>
+        </div>
     </div>
 
     <div class="mesic-nav">
-        <span>Vyberte měsíc pro správu:</span>
+        <span>Vybrat období pro detaily:</span>
         <select id="select-mesic" onchange="nactiData()">
             </select>
     </div>
 
     <div class="stats">
         <div class="stat-box stat-trzby">
-            <span style="font-size:0.8rem">TRŽBY</span>
+            <span style="font-size:0.8rem">TRŽBY (MĚSÍC)</span>
             <span class="stat-val" id="total-trzby">0 Kč</span>
         </div>
         <div class="stat-box stat-naklady">
-            <span style="font-size:0.8rem">NÁKLADY</span>
+            <span style="font-size:0.8rem">NÁKLADY (MĚSÍC)</span>
             <span class="stat-val" id="total-naklady">0 Kč</span>
         </div>
         <div class="stat-box stat-zisk">
-            <span style="font-size:0.8rem">ČISTÝ ZISK</span>
+            <span style="font-size:0.8rem">ZISK (MĚSÍC)</span>
             <span class="stat-val" id="total-zisk">0 Kč</span>
         </div>
     </div>
 
     <div class="card">
-        <h3>➕ Přidat náklad (nákup zboží, doprava apod.)</h3>
+        <h3>➕ Přidat náklad pro vybraný měsíc</h3>
         <div class="form-group">
-            <input type="text" id="naklad-co" placeholder="Za co (např. Nákup masa)">
+            <input type="text" id="naklad-co" placeholder="Za co...">
             <input type="number" id="naklad-kolik" placeholder="Kč">
             <button class="btn-add" onclick="pridatNaklad()">ULOŽIT</button>
         </div>
     </div>
 
     <div class="card">
-        <h3>📉 Historie nákladů</h3>
+        <h3>📉 Historie nákladů vybraného měsíce</h3>
         <table>
             <thead><tr><th>Datum</th><th>Popis</th><th style="text-align:right">Částka</th><th></th></tr></thead>
             <tbody id="seznam-nakladu"></tbody>
@@ -90,20 +109,41 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Vygenerování měsíců: Aktuální + 11 dopředu
+    // Generování měsíců
     const select = document.getElementById("select-mesic");
     const mesiceNazvy = ["Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"];
     const dnes = new Date();
-    
     for(let i = 0; i < 12; i++) {
         let m = dnes.getMonth() + i;
         let r = dnes.getFullYear();
-        if (m > 11) { r += Math.floor(m / 12); m = m % 12; }
+        if (m > 11) { r += 1; m = m % 12; }
         let val = (m + 1) + "_" + r;
         let opt = document.createElement("option");
         opt.value = val;
         opt.innerHTML = mesiceNazvy[m] + " " + r;
         select.appendChild(opt);
+    }
+
+    // --- HLAVNÍ FUNKCE PRO CELKOVÝ SOUHRN ---
+    function vypocitejCelkovouBilanci() {
+        db.ref("finance").on("value", (snap) => {
+            const vsechnaData = snap.val() || {};
+            let celkoveTrzby = 0;
+            let celkoveNaklady = 0;
+
+            for (let mesicId in vsechnaData) {
+                const mesic = vsechnaData[mesicId];
+                // Sečti tržby v tomto měsíci
+                if (mesic.trzby) {
+                    for (let tId in mesic.trzby) celkoveTrzby += parseInt(mesic.trzby[tId].castka || 0);
+                }
+                // Sečti náklady v tomto měsíci
+                if (mesic.naklady) {
+                    for (let nId in mesic.naklady) celkoveNaklady += parseInt(mesic.naklady[nId].castka || 0);
+                }
+            }
+            document.getElementById("celkova-bilance").innerText = (celkoveTrzby - celkoveNaklady) + " Kč";
+        });
     }
 
     function nactiData() {
@@ -112,7 +152,7 @@
         db.ref("finance/" + obdobi + "/trzby").on("value", (snap) => {
             let trzby = 0;
             const data = snap.val() || {};
-            for (let id in data) { trzby += parseInt(data[id].castka || 0); }
+            for (let id in data) trzby += parseInt(data[id].castka || 0);
             document.getElementById("total-trzby").innerText = trzby + " Kč";
             aktualizujZisk();
         });
@@ -157,13 +197,15 @@
     }
 
     function vynulovatData() {
-        if(confirm("POZOR! Smazat kompletní historii tržeb a nákladů pro toto vybrané období?")) {
-            const obdobi = document.getElementById("select-mesic").value;
+        const obdobi = document.getElementById("select-mesic").value;
+        if(confirm("Opravdu smazat data pro " + obdobi + "?")) {
             db.ref("finance/" + obdobi).remove();
         }
     }
 
+    // Spuštění
     nactiData();
+    vypocitejCelkovouBilanci();
 </script>
 </body>
 </html>
