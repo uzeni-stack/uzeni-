@@ -17,9 +17,10 @@
         .karta { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary); }
         .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
-        .qr-area { margin-top: 15px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 170px; text-align: center; }
+        .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; display: inline-block; margin-bottom: 10px; }
+        .qr-area { margin-top: 5px; }
+        .btn-qr { background: #000; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 210px; text-align: center; }
         .qr-popup div img { margin: 0 auto 10px; }
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
@@ -46,7 +47,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TOHLE JE 100% VALIDNÍ IBAN PRO 115-492390227/0100
+    // ALTERNATIVNÍ IBAN 
     const MUJ_IBAN = "CZ0601000001150492390227";
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -67,15 +68,17 @@
                 const vahaGr = obj.skutecna_vaha_gr || 0;
                 const zapl = obj.zaplaceno || 0;
                 const kPlaceni = Math.round((vahaGr / 1000) * cenaKg);
+                
                 vypis.innerHTML += `
                     <div class="karta">
                         <div class="info">
                             <span class="jmeno">${obj.zakaznik}</span>
+                            <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano || 0} kg</span>
                             <div class="qr-area">
                                 <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
                                     <div id="qr-place-${id}"></div>
-                                    <small style="color:#666;font-size:10px">Naskenujte v bance</small>
+                                    <small style="color:#666;font-size:12px">Naskenujte v bance</small>
                                 </div>
                             </div>
                         </div>
@@ -109,13 +112,13 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // Standardní SPD řetězec
-            const spdText = "SPD*1.0*ACC:" + MUJ_IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            // POUZE ČÁSTKA A ÚČET - BEZ MSG
+            const spdText = "SPD*1.0*ACC:" + MUJ_IBAN + "*AM:" + castka + ".00*CUR:CZK";
             
             new QRCode(place, {
                 text: spdText,
-                width: 150,
-                height: 150,
+                width: 180,
+                height: 180,
                 correctLevel : QRCode.CorrectLevel.M
             });
             wrap.style.display = "block";
