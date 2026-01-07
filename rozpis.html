@@ -17,18 +17,16 @@
         .karta { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary); }
         .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
-        .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
         .qr-area { margin-top: 15px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+        .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 160px; text-align: center; }
-        .qr-popup img { display: block; margin: 0 auto 10px; }
+        .qr-popup div img { margin: 0 auto 10px; }
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
-        .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
-        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
+        .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; }
+        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
-        .akce-box { display: flex; gap: 8px; }
         .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1b5e20; }
         .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
         .btn-smazat { background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
@@ -47,10 +45,6 @@
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
-    // Údaje pro platbu (vychází z 115-4962390227/0100)
-    const UCET_QR = "1154962390227";
-    const BANKA_QR = "0100";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -74,7 +68,6 @@
                     <div class="karta">
                         <div class="info">
                             <span class="jmeno">${obj.zakaznik}</span>
-                            <span class="chce">OBJEDNÁNO: ${obj.vaha_objednano} kg</span>
                             <div class="qr-area">
                                 <button class="btn-qr" onclick="zobrazQR('${id}', ${kPlaceni})">📱 QR PLATBA</button>
                                 <div class="qr-popup" id="qr-wrap-${id}">
@@ -85,9 +78,7 @@
                         </div>
                         <div class="sloupec">
                             <label>GRAMY</label>
-                            <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" 
-                                   oninput="prepocitej('${id}')" 
-                                   onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
+                            <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                         </div>
                         <div class="cena-box">
                             <label>K PLACENÍ</label>
@@ -95,8 +86,7 @@
                         </div>
                         <div class="sloupec">
                             <label>ZAPLACENO</label>
-                            <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" 
-                                   onchange="uloz('${id}','zaplaceno',this.value)">
+                            <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
                         </div>
                         <div class="akce-box">
                             <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">OK</button>
@@ -116,15 +106,18 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // Standardní SPD text pro české banky
-            const spdText = "SPD*1.0*ACC:" + UCET_QR + "/" + BANKA_QR + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            // SPRÁVNÉ ČÍSLO ÚČTU BEZ PŘEDČÍSLÍ: 492390227/0100
+            const cisloUctu = "492390227";
+            const kodBanky = "0100";
             
-            // Vygenerování QR s vyšší odolností (H) a dostatečnou velikostí
+            // SPD formát s vysokou kompatibilitou
+            const spdText = "SPD*1.0*ACC:" + cisloUctu + "/" + kodBanky + "*AM:" + castka + ".00*CUR:CZK";
+            
             new QRCode(place, {
                 text: spdText,
                 width: 140,
                 height: 140,
-                correctLevel : QRCode.CorrectLevel.H 
+                correctLevel : QRCode.CorrectLevel.H
             });
             wrap.style.display = "block";
         }
