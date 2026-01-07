@@ -18,15 +18,15 @@
         .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
         .qr-area { margin-top: 15px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 160px; text-align: center; }
+        .btn-qr { background: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 15px; border-radius: 10px; border: 2px solid #000; width: 170px; text-align: center; }
         .qr-popup div img { margin: 0 auto 10px; }
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; }
-        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
+        .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; }
         .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1b5e20; }
         .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
         .btn-smazat { background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
@@ -45,6 +45,9 @@
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    // TVŮJ IBAN VYPOČTENÝ Z 115-492390227/0100
+    const MUJ_IBAN = "CZ0401000001150492390227";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -78,15 +81,15 @@
                         </div>
                         <div class="sloupec">
                             <label>GRAMY</label>
-                            <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
+                            <input type="number" class="input-vaha" id="v-" + id value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                         </div>
                         <div class="cena-box">
                             <label>K PLACENÍ</label>
-                            <span class="cena-cislo" id="c-${id}">${kPlaceni} Kč</span>
+                            <span class="cena-cislo" id="c-" + id>${kPlaceni} Kč</span>
                         </div>
                         <div class="sloupec">
                             <label>ZAPLACENO</label>
-                            <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
+                            <input type="number" class="input-platba" id="z-" + id value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
                         </div>
                         <div class="akce-box">
                             <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">OK</button>
@@ -106,9 +109,8 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // PŘESNÝ FORMÁT DLE TVÉHO VZORU
-            const ucetSlozeny = "115-492390227/0100";
-            const spdText = "SPD*1.0*ACC:" + ucetSlozeny + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
+            // POUŽITÍ IBANu - TOHLE JE NEJJISTĚJŠÍ CESTA
+            const spdText = "SPD*1.0*ACC:" + MUJ_IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
             
             new QRCode(place, {
                 text: spdText,
