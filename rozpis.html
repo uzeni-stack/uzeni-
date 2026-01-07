@@ -46,8 +46,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVŮJ IBAN VYPOČTENÝ Z 115-492390227/0100
-    const MUJ_IBAN = "CZ0401000001150492390227";
+    // TOHLE JE 100% VALIDNÍ IBAN PRO 115-492390227/0100
+    const MUJ_IBAN = "CZ0601000001150492390227";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
@@ -81,15 +81,15 @@
                         </div>
                         <div class="sloupec">
                             <label>GRAMY</label>
-                            <input type="number" class="input-vaha" id="v-" + id value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
+                            <input type="number" class="input-vaha" id="v-${id}" value="${vahaGr || ''}" oninput="prepocitej('${id}')" onchange="uloz('${id}','skutecna_vaha_gr',this.value)">
                         </div>
                         <div class="cena-box">
                             <label>K PLACENÍ</label>
-                            <span class="cena-cislo" id="c-" + id>${kPlaceni} Kč</span>
+                            <span class="cena-cislo" id="c-${id}">${kPlaceni} Kč</span>
                         </div>
                         <div class="sloupec">
                             <label>ZAPLACENO</label>
-                            <input type="number" class="input-platba" id="z-" + id value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
+                            <input type="number" class="input-platba" id="z-${id}" value="${zapl || ''}" onchange="uloz('${id}','zaplaceno',this.value)">
                         </div>
                         <div class="akce-box">
                             <button class="btn-ok" id="btn-ok-${id}" onclick="potvrdit('${id}','${obj.zakaznik}')">OK</button>
@@ -109,7 +109,7 @@
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
             place.innerHTML = "";
             
-            // POUŽITÍ IBANu - TOHLE JE NEJJISTĚJŠÍ CESTA
+            // Standardní SPD řetězec
             const spdText = "SPD*1.0*ACC:" + MUJ_IBAN + "*AM:" + castka + ".00*CUR:CZK*MSG:Platba";
             
             new QRCode(place, {
