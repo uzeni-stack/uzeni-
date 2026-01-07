@@ -7,31 +7,51 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
     <style>
         :root { --primary: #1976d2; --success: #2e7d32; --danger: #d32f2f; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
-        .header { background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        
+        .header { 
+            background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 100; 
+        }
         .header h2 { margin: 0; color: var(--primary); text-transform: uppercase; font-size: 1.2rem; }
         .btn-zpet { text-decoration: none; color: #666; font-weight: bold; border: 1px solid #ccc; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; background: #fff; }
+
         .container { max-width: 1100px; margin: 20px auto; padding: 0 10px; }
-        .karta { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary); }
+
+        .karta { 
+            background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; 
+            gap: 15px; align-items: flex-end; border-left: 6px solid var(--primary);
+        }
+
         .info { flex: 1; min-width: 200px; }
         .jmeno { font-size: 1.4rem; font-weight: 800; display: block; margin-bottom: 5px; color: #1a1a1a; }
         .chce { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffeeba; }
+
+        /* QR AREA */
         .qr-area { margin-top: 15px; }
-        .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 2px solid #000; width: 150px; }
+        .btn-qr { background: #000; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+        .qr-popup { display: none; margin-top: 10px; background: white; padding: 10px; border-radius: 10px; border: 2px solid #000; width: 140px; }
+        #qr-place img { margin: 0 auto; }
+
         .sloupec { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
+        
         .input-vaha { width: 100px; padding: 10px; border: 2px solid var(--primary); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; outline: none; }
         .input-platba { width: 100px; padding: 10px; border: 2px solid var(--success); border-radius: 8px; font-size: 1.2rem; font-weight: bold; text-align: center; color: var(--success); background: #f1f8e9; outline: none; }
+
         .cena-box { min-width: 120px; text-align: center; border-left: 1px solid #eee; border-right: 1px solid #eee; padding: 0 10px; }
         .cena-cislo { font-size: 1.8rem; font-weight: 900; color: var(--danger); display: block; }
+
         .akce-box { display: flex; gap: 8px; }
         .btn-ok { background: var(--success); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1b5e20; }
         .btn-ok.ulozeno { background: #aaa; box-shadow: 0 4px 0 #777; }
         .btn-smazat { background: #fff; color: var(--danger); border: 2px solid var(--danger); padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        .prazdno { text-align: center; padding: 60px; color: #aaa; background: white; border-radius: 15px; }
     </style>
 </head>
 <body>
@@ -48,15 +68,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TVÉ ÚDAJE (Upraveno pro standard QR platby)
-    const UCET_KOMPLET = "1154962390227/0100"; 
+    // TVŮJ ÚČET (Předčíslí 115)
+    const PREDCISLI = "115";
+    const CISLO = "4962390227";
+    const BANKA = "0100";
 
     const urlParams = new URLSearchParams(window.location.search);
     const filtr = urlParams.get('filtr');
     document.getElementById("produkt-nadpis").innerText = filtr || "Rozpis vážení";
 
     let cenaKg = 0;
-    let qrGeneratory = {}; // Uložiště pro instance QR kódu
 
     db.ref("produkty/" + filtr).once("value", (s) => {
         cenaKg = s.val() || 0;
@@ -117,21 +138,19 @@
             wrap.style.display = "none";
         } else {
             if (castka <= 0) { alert("Zadejte váhu!"); return; }
-            
-            // Vyčistit starý kód pokud existuje
             place.innerHTML = "";
             
-            // Sestavení textu pro QR platbu
-            const spdText = `SPD*1.0*ACC:${UCET_KOMPLET.replace('-','').replace('/','')}*AM:${castka}*CUR:CZK*MSG:Platba`;
+            // FORMÁT SPD: Předčíslí(6 míst)-Číslo(10 míst)Banka(4 místa)
+            const fPrefix = PREDCISLI.padStart(6, '0');
+            const fCislo = CISLO.padStart(10, '0');
+            const ucetQR = `${fPrefix}${fCislo}${BANKA}`;
             
-            // Vygenerování kódu PŘÍMO v prohlížeči
+            const spdText = `SPD*1.0*ACC:${ucetQR}*AM:${castka}.00*CUR:CZK*MSG:Platba`;
+            
             new QRCode(place, {
                 text: spdText,
-                width: 128,
-                height: 128,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
+                width: 120,
+                height: 120
             });
             
             wrap.style.display = "block";
