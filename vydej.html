@@ -1,137 +1,60 @@
-<script>
-    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+function potvrditVydano(jm) {
+    console.log("Spouštím potvrzení pro:", jm);
 
-    let cenyProduktu = {};
+    db.ref("objednavky").once("value", (snap) => {
+        const data = snap.val();
+        let celkovaCastka = 0;
+        let seznamZbozi = [];
+        let kAktualizaci = [];
 
-    // 1. Načtení cen
-    db.ref("produkty").on("value", (snap) => {
-        cenyProduktu = snap.val() || {};
-        nactiObjednavky();
-    });
-
-    // 2. Načtení objednávek
-    function nactiObjednavky() {
-        db.ref("objednavky").on("value", (snapshot) => {
-            if (document.activeElement.tagName === "INPUT") return;
-
-            const data = snapshot.val() || {};
-            const lide = {};
-            let existujeNeco = false;
-
-            for (let produkt in data) {
-                for (let id in data[produkt]) {
-                    const obj = data[produkt][id];
-                    if (!obj.vydano) {
-                        const jm = obj.zakaznik || "Anonymní";
-                        if (!lide[jm]) lide[jm] = { polozky: [] };
-                        lide[jm].polozky.push({ ...obj, produkt: produkt, id: id });
-                        existujeNeco = true;
+        for (let produkt in data) {
+            for (let id in data[produkt]) {
+                const obj = data[produkt][id];
+                if (obj.zakaznik === jm && !obj.vydano) {
+                    const cenaKg = cenyProduktu[produkt] || 0;
+                    const vaha = obj.skutecna_vaha_gr || 0;
+                    const cena = Math.round((vaha / 1000) * cenaKg);
+                    
+                    if (vaha > 0) {
+                        celkovaCastka += cena;
+                        seznamZbozi.push(produkt + " (" + vaha + "g)");
+                        kAktualizaci.push({p: produkt, i: id});
                     }
                 }
             }
-            vykresli(lide);
-        });
-    }
+        }
 
-    // 3. Vykreslení
-    function vykresli(lide) {
-        const kontejner = document.getElementById("seznam-karet");
-        kontejner.innerHTML = "";
-
-        if (Object.keys(lide).length === 0) {
-            kontejner.innerHTML = "<div style='text-align:center; padding:50px;'><h3>Všechno je vydáno! ✅</h3></div>";
+        if (kAktualizaci.length === 0) {
+            alert("Chyba: Nebyly nalezeny žádné položky s vyplněnou váhou u jména: " + jm);
             return;
         }
 
-        for (let jm in lide) {
-            let htmlPolozky = "";
-            let celkovaSumaKarty = 0;
+        // ZÁPIS DO DATABÁZE
+        const novaPlatba = {
+            jmeno: jm,
+            castka: celkovaCastka,
+            zbozi: seznamZbozi.join(", "),
+            datum: new Date().toLocaleDateString(),
+            stav: "vydano_nezaplaceno"
+        };
 
-            lide[jm].polozky.forEach(p => {
-                const cenaKg = cenyProduktu[p.produkt] || 0;
-                const vahaGr = p.skutecna_vaha_gr || 0;
-                const vypocetCeny = Math.round((vahaGr / 1000) * cenaKg);
-                celkovaSumaKarty += vypocetCeny;
+        db.ref("nezaplaceno").push(novaPlatba)
+            .then(() => {
+                console.log("Zápis do 'nezaplaceno' úspěšný");
                 
-                htmlPolozky += `
-                    <div class="polozka">
-                        <div class="nazev-zbozi">${p.produkt}</div>
-                        <div class="vaha-obj">Obj: ${p.vaha_objednano} kg</div>
-                        <div class="vstup-gramy">
-                            <input type="number" value="${vahaGr || ''}" placeholder="0" onchange="ulozVahu('${p.produkt}','${p.id}', this.value)">
-                            <span>gr</span>
-                        </div>
-                        <div class="cena-radek">${vypocetCeny} Kč</div>
-                    </div>`;
-            });
-
-            // TLAČÍTKO: Teď mu posíláme jen JMÉNO zákazníka, zbytek si funkce najde sama
-            kontejner.innerHTML += `
-                <div class="karta-zakaznik">
-                    <div class="jmeno-hlava">${jm}</div>
-                    ${htmlPolozky}
-                    <div class="paticka">
-                        <div class="celkova-cena">${celkovaSumaKarty} Kč</div>
-                        <button class="btn-vydat" onclick="potvrditVydano('${jm.replace(/'/g, "\\'")}')">
-                            VYDÁNO (K PLATBĚ)
-                        </button>
-                    </div>
-                </div>`;
-        }
-    }
-
-    function ulozVahu(prod, id, v) {
-        db.ref("objednavky/" + prod + "/" + id).update({ skutecna_vaha_gr: parseInt(v) || 0 });
-    }
-
-    // 4. OPRAVENÁ FUNKCE VYDÁNÍ
-    function potvrditVydano(jm) {
-        db.ref("objednavky").once("value", (snap) => {
-            const data = snap.val();
-            let celkovaCastka = 0;
-            let seznamZbozi = [];
-            let kAktualizaci = [];
-
-            // Projdeme vše a najdeme věci tohoto člověka
-            for (let produkt in data) {
-                for (let id in data[produkt]) {
-                    const obj = data[produkt][id];
-                    if (obj.zakaznik === jm && !obj.vydano) {
-                        const cenaKg = cenyProduktu[produkt] || 0;
-                        const vaha = obj.skutecna_vaha_gr || 0;
-                        const cena = Math.round((vaha / 1000) * cenaKg);
-                        
-                        if (vaha > 0) {
-                            celkovaCastka += cena;
-                            seznamZbozi.push(`${produkt} (${vaha}g)`);
-                            kAktualizaci.push({p: produkt, i: id});
-                        }
-                    }
-                }
-            }
-
-            if (celkovaCastka <= 0) {
-                alert("Vyplňte váhu u produktů!");
-                return;
-            }
-
-            // A) Zápis do nezaplaceno
-            db.ref("nezaplaceno").push({
-                jmeno: jm,
-                castka: celkovaCastka,
-                zbozi: seznamZbozi.join(", "),
-                datum: new Date().toLocaleDateString()
-            }).then(() => {
-                // B) Označení za vydané
-                kAktualizaci.forEach(item => {
-                    db.ref(`objednavky/${item.p}/${item.i}`).update({ vydano: true });
+                // Označit jako vydané v původních objednávkách
+                let sliby = kAktualizaci.map(item => {
+                    return db.ref("objednavky/" + item.p + "/" + item.i).update({ vydano: true });
                 });
-                alert("Uloženo do sekce Nezaplaceno!");
-            }).catch(err => {
-                alert("Chyba při ukládání: " + err.message);
+
+                return Promise.all(sliby);
+            })
+            .then(() => {
+                alert("ÚSPĚŠNĚ ULOŽENO!\nZákazník: " + jm + "\nČástka: " + celkovaCastka + " Kč");
+            })
+            .catch((error) => {
+                alert("CHYBA DATABÁZE: " + error.message);
+                console.error(error);
             });
-        });
-    }
-</script>
+    });
+}
