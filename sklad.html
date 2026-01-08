@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sklad - Souhrn přípravy</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --primary: #1a237e; --sklad: #546e7a; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        
+        .header { background: white; padding: 15px 20px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 600px; margin: 30px auto; padding: 0 15px; }
+        
+        .sklad-karta { 
+            background: white; border-radius: 12px; padding: 0; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden;
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { background: var(--sklad); color: white; padding: 15px; text-align: left; text-transform: uppercase; font-size: 0.8rem; }
+        td { padding: 15px; border-bottom: 1px solid #eee; font-size: 1.1rem; }
+        
+        .produkt-nazev { font-weight: bold; color: var(--primary); }
+        .celkem-kg { font-weight: 900; color: #d32f2f; text-align: right; font-size: 1.3rem; }
+        .jednotka { font-size: 0.8rem; color: #999; margin-left: 5px; font-weight: normal; }
+        
+        .btn-zpet { background: var(--primary); color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; }
+        
+        .prazdno { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 style="margin:0; color:var(--sklad);">📦 CELKEM K PŘÍPRAVĚ</h2>
+    <a href="admin.html" class="btn-zpet">🏠 ADMIN</a>
+</div>
+
+<div class="container">
+    <div class="sklad-karta">
+        <table>
+            <thead>
+                <tr>
+                    <th>Produkt</th>
+                    <th style="text-align:right">Celkové množství</th>
+                </tr>
+            </thead>
+            <tbody id="tabulka-sklad">
+                </tbody>
+        </table>
+        <div id="stav-prazdno"></div>
+    </div>
+    
+    <p style="text-align:center; color:#888; font-size:0.8rem; margin-top:20px;">
+        * Sčítají se pouze objednávky, které ještě nebyly označeny jako "Vydané".
+    </p>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    db.ref("objednavky").on("value", (snap) => {
+        const data = snap.val() || {};
+        const tabulka = document.getElementById("tabulka-sklad");
+        const stav = document.getElementById("stav-prazdno");
+        
+        let soucty = {};
+        let maData = false;
+
+        // Procházíme složky produktů (Jablka, Hrušky...)
+        for (let produkt in data) {
+            let celkemZaProdukt = 0;
+            
+            // Procházíme jednotlivé lidi v daném produktu
+            for (let id in data[produkt]) {
+                const objednavka = data[produkt][id];
+                
+                // Sčítáme jen ty, které nejsou označené jako "vydano: true"
+                if (!objednavka.vydano) {
+                    celkemZaProdukt += parseFloat(objednavka.vaha_objednano || 0);
+                    maData = true;
+                }
+            }
+            
+            if (celkemZaProdukt > 0) {
+                soucty[produkt] = celkemZaProdukt;
+            }
+        }
+
+        // Vykreslení
+        tabulka.innerHTML = "";
+        if (!maData) {
+            stav.innerHTML = "<div class='prazdno'>Aktuálně nejsou žádné nové objednávky k přípravě.</div>";
+            return;
+        } else {
+            stav.innerHTML = "";
+        }
+
+        // Seřadíme a vypíšeme
+        Object.keys(soucty).sort().forEach(nazev => {
+            tabulka.innerHTML += `
+                <tr>
+                    <td class="produkt-nazev">${nazev}</td>
+                    <td class="celkem-kg">${soucty[nazev]} <span class="jednotka">kg</span></td>
+                </tr>
+            `;
+        });
+    });
+</script>
+
+</body>
+</html>
