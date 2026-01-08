@@ -2,11 +2,11 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Výdejní karty - Opravená verze</title>
+    <title>Výdej - Správa objednávek</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --accent: #ff9800; --bg: #f4f7f9; --ready: #e8f5e9; }
+        :root { --primary: #1a237e; --accent: #ff9800; --bg: #f4f7f9; --ready: #e8f5e9; --danger: #d32f2f; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 25px; }
         
@@ -14,30 +14,31 @@
         .karta-hlavicka { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
         .jmeno { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
         
-        .radek { display: grid; grid-template-columns: 2fr 1fr 1.5fr 1fr; gap: 15px; padding: 12px 8px; border-bottom: 1px solid #f0f0f0; align-items: center; border-radius: 6px; }
-        /* Zelený podbarvený řádek, když jsou zadány gramy */
+        /* Úprava mřížky pro přidání tlačítka smazat */
+        .radek { display: grid; grid-template-columns: 2fr 1fr 1.2fr 1fr 0.5fr; gap: 10px; padding: 12px 8px; border-bottom: 1px solid #f0f0f0; align-items: center; border-radius: 6px; }
         .radek.ma-vahu { background-color: var(--ready); border-left: 4px solid #4caf50; }
         
-        input[type="number"] { width: 85px; padding: 8px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1rem; }
-        input:focus { border-color: var(--accent); outline: none; }
+        input[type="number"] { width: 80px; padding: 8px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-weight: bold; }
+        
+        .btn-vydat { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-storno-polozka { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
+        .btn-storno-polozka:hover { color: var(--danger); }
+        
+        .btn-zrusit-vse { background: none; border: 1px solid #ffcdd2; color: #e57373; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
+        .btn-zrusit-vse:hover { background: #ffebee; color: var(--danger); border-color: var(--danger); }
 
         .cena-polozka { text-align: right; font-weight: bold; color: #444; }
         .paticka { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 2px solid #eee; }
-        .celkem-suma { font-size: 1.8rem; font-weight: 900; color: #d32f2f; }
-        
-        .btn-vydat { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-vydat:hover { background: #e68a00; }
-        .btn-zpet { text-decoration: none; color: var(--primary); font-weight: bold; padding: 10px; border: 1px solid var(--primary); border-radius: 6px; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <h2 style="margin:0">🚚 VÝDEJ ZBOŽÍ</h2>
-    <a href="admin.html" class="btn-zpet">🏠 ZPĚT</a>
+    <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary);">🏠 ZPĚT</a>
 </div>
 
-<div id="seznam-karet">Načítám...</div>
+<div id="seznam-karet">Načítám objednávky...</div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -45,11 +46,8 @@
     const db = firebase.database();
 
     let cenyZbozi = {};
-
-    // 1. Načtení cen
     db.ref("produkty").on("value", s => { cenyZbozi = s.val() || {}; });
 
-    // 2. Načtení a seskupení
     db.ref("objednavky").on("value", snapshot => {
         if (document.activeElement.tagName === "INPUT") return;
         const data = snapshot.val() || {};
@@ -83,20 +81,21 @@
             let sumaKarty = 0;
 
             s.polozky.forEach(p => {
-                const cKg = cenyZbozi[p.produkt] || 0;
                 const vGr = parseInt(p.skutecna_vaha_gr) || 0;
-                const cenaRadek = Math.round((vGr / 1000) * cKg);
+                const cenaRadek = Math.round((vGr / 1000) * (cenyZbozi[p.produkt] || 0));
                 sumaKarty += cenaRadek;
 
                 radkyHtml += `
                     <div class="radek ${vGr > 0 ? 'ma-vahu' : ''}">
                         <div class="produkt-nazev">${p.produkt}</div>
-                        <div style="color:#777; font-size:0.8rem">Obj: ${p.vaha_objednano}kg</div>
+                        <div style="color:#777; font-size:0.8rem">${p.vaha_objednano}kg</div>
                         <div>
                             <input type="number" value="${vGr || ''}" placeholder="0" 
                                 onchange="ulozVahu('${p.produkt}','${p.id}', this.value)"> <small>gr</small>
                         </div>
                         <div class="cena-polozka">${cenaRadek} Kč</div>
+                        <button class="btn-storno-polozka" title="Smazat tuto položku" 
+                            onclick="smazatPolozku('${p.produkt}','${p.id}')">✕</button>
                     </div>`;
             });
 
@@ -104,11 +103,11 @@
                 <div class="karta">
                     <div class="karta-hlavicka">
                         <div class="jmeno">${s.jmeno}</div>
-                        <div style="color:#888; font-size:0.8rem">${s.datum || ''}</div>
+                        <button class="btn-zrusit-vse" onclick="smazatCelouSkupinu('${idSkupiny}')">Zrušit celou obj.</button>
                     </div>
                     ${radkyHtml}
                     <div class="paticka">
-                        <div class="celkem-suma">${sumaKarty} Kč</div>
+                        <div style="font-size:1.8rem; font-weight:900; color:var(--danger)">${sumaKarty} Kč</div>
                         <button class="btn-vydat" onclick="potvrditVydat('${idSkupiny}')">VYDAT ZVÁŽENÉ</button>
                     </div>
                 </div>`;
@@ -119,11 +118,33 @@
         db.ref("objednavky/" + prod + "/" + id).update({ skutecna_vaha_gr: parseInt(v) || 0 });
     }
 
+    // 1. SMAZÁNÍ JEDNÉ POLOŽKY (ten křížek)
+    function smazatPolozku(produkt, id) {
+        if (confirm("Opravdu smazat tuto položku z objednávky?")) {
+            db.ref(`objednavky/${produkt}/${id}`).remove();
+        }
+    }
+
+    // 2. SMAZÁNÍ CELÉ KARTY
+    function smazatCelouSkupinu(idSkupiny) {
+        if (!confirm("Chcete smazat kompletně celou objednávku tohoto zákazníka?")) return;
+        
+        db.ref("objednavky").once("value", snap => {
+            const data = snap.val();
+            for (let prod in data) {
+                for (let id in data[prod]) {
+                    if ((data[prod][id].id_skupiny || data[prod][id].zakaznik) === idSkupiny) {
+                        db.ref(`objednavky/${prod}/${id}`).remove();
+                    }
+                }
+            }
+        });
+    }
+
     function potvrditVydat(idSkupiny) {
         db.ref("objednavky").once("value", snap => {
             const data = snap.val();
             let celkem = 0, seznam = [], kAktu = [], jmeno = "";
-
             for (let prod in data) {
                 for (let id in data[prod]) {
                     const o = data[prod][id];
@@ -131,23 +152,20 @@
                         const vGr = parseInt(o.skutecna_vaha_gr) || 0;
                         if (vGr > 0) {
                             jmeno = o.zakaznik;
-                            const cena = Math.round((vGr / 1000) * (cenyZbozi[prod] || 0));
-                            celkem += cena;
+                            celkem += Math.round((vGr / 1000) * (cenyZbozi[prod] || 0));
                             seznam.push(`${prod} (${vGr}g)`);
                             kAktu.push({ p: prod, i: id });
                         }
                     }
                 }
             }
-
             if (kAktu.length === 0) { alert("Zadej gramy!"); return; }
-
             db.ref("nezaplaceno").push({
                 jmeno: jmeno, castka: celkem, zbozi: seznam.join(", "),
                 datum: new Date().toLocaleDateString(), id_skupiny: idSkupiny
             }).then(() => {
                 kAktu.forEach(item => db.ref(`objednavky/${item.p}/${item.i}`).update({ vydano: true }));
-                alert("Odesláno k platbě!");
+                alert("Vydáno!");
             });
         });
     }
