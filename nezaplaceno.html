@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nezaplaceno - Pokladna</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --primary: #1a237e; --dluh: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        .header { background: #fff; padding: 15px 20px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+        .karta-dluh { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; border-left: 6px solid var(--dluh); }
+        .info { flex: 1; }
+        .jmeno { font-size: 1.2rem; font-weight: bold; color: #111; }
+        .zbozi-vypis { font-size: 0.85rem; color: #666; margin-top: 4px; }
+        .castka { font-size: 1.4rem; font-weight: 900; color: var(--dluh); margin: 0 20px; white-space: nowrap; }
+        .btn-zaplatit { background: var(--success); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-zaplatit:hover { background: #1b5e20; transform: scale(1.03); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 style="margin:0; color:var(--dluh);">🔴 NEZAPLACENÉ ODBĚRY</h2>
+    <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary);">🏠 ADMIN</a>
+</div>
+
+<div class="container" id="seznam-dluhu">
+    </div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    db.ref("nezaplaceno").on("value", (snap) => {
+        const data = snap.val() || {};
+        const kontejner = document.getElementById("seznam-dluhu");
+        kontejner.innerHTML = "";
+
+        if (Object.keys(data).length === 0) {
+            kontejner.innerHTML = "<h3 style='text-align:center; color:green; margin-top:50px;'>Vše je zaplaceno! 💰✅</h3>";
+            return;
+        }
+
+        for (let id in data) {
+            const d = data[id];
+            kontejner.innerHTML += `
+                <div class="karta-dluh">
+                    <div class="info">
+                        <div class="jmeno">${d.jmeno}</div>
+                        <div class="zbozi-vypis">${d.zbozi}</div>
+                        <div style="font-size:0.7rem; color:#999; margin-top:5px;">Vydáno: ${d.datum}</div>
+                    </div>
+                    <div class="castka">${d.castka} Kč</div>
+                    <button class="btn-zaplatit" onclick="zaplaceno('${id}', ${JSON.stringify(d)})">ZAPLATIL</button>
+                </div>`;
+        }
+    });
+
+    function zaplaceno(id, data) {
+        const dnes = new Date();
+        const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
+
+        // 1. Uložit do tržeb (Finance)
+        db.ref("finance/" + obdobi + "/trzby").push({
+            zakaznik: data.jmeno,
+            castka: data.castka,
+            datum: dnes.toLocaleDateString(),
+            zbozi: data.zbozi
+        });
+
+        // 2. Smazat z nezaplacených
+        db.ref("nezaplaceno/" + id).remove();
+
+        alert("Peníze uloženy do financí! ✅");
+    }
+</script>
+</body>
+</html>
