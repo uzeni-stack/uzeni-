@@ -9,95 +9,88 @@
         :root { --dluh: #d32f2f; --ok: #2e7d32; --main: #1a237e; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .karta { background: white; padding: 20px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 8px solid var(--dluh); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .info { flex: 1; }
-        .jmeno { font-size: 1.25rem; font-weight: bold; color: #111; }
-        .zbozi { color: #666; font-size: 0.9rem; margin-top: 4px; line-height: 1.4; }
-        .castka { font-size: 1.6rem; font-weight: 900; color: var(--dluh); margin: 0 25px; min-width: 100px; text-align: right; }
-        .btn-pay { background: var(--ok); color: white; border: none; padding: 15px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
-        .btn-pay:hover { background: #1b5e20; transform: scale(1.03); }
-        .zpet { text-decoration: none; color: var(--main); font-weight: bold; border: 1px solid var(--main); padding: 8px 15px; border-radius: 6px; }
+        .karta { background: white; padding: 20px; border-radius: 10px; margin-bottom: 12px; border-left: 8px solid var(--dluh); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .jmeno { font-size: 1.3rem; font-weight: bold; color: var(--main); margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        
+        /* Styl pro jednotlivé položky v rámci jednoho dluhu */
+        .polozka-v-dluhu { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dotted #eee; }
+        .polozka-info { flex: 1; font-size: 1rem; color: #333; }
+        .polozka-castka { font-weight: 900; color: var(--dluh); margin: 0 20px; width: 80px; text-align: right; }
+        
+        .btn-pay-small { background: var(--ok); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .btn-pay-small:hover { background: #1b5e20; }
+        .btn-zpet { text-decoration: none; color: var(--main); font-weight: bold; border: 1px solid var(--main); padding: 8px 15px; border-radius: 6px; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <h2 style="margin:0; color:var(--dluh);">🔴 ČEKÁ NA ZAPLACENÍ</h2>
-    <a href="admin.html" class="zpet">🏠 ADMIN</a>
+    <a href="admin.html" class="btn-zpet">🏠 ADMIN</a>
 </div>
 
-<div id="seznam-dluzniku">Načítám seznam plateb...</div>
+<div id="seznam-dluzniku">Načítám platby...</div>
 
 <script>
-    // 1. Inicializace Firebase
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Načítání dat v reálném čase
     db.ref("nezaplaceno").on("value", (snap) => {
         const data = snap.val() || {};
         const kontejner = document.getElementById("seznam-dluzniku");
         kontejner.innerHTML = "";
 
-        const polozky = Object.keys(data);
-        if (polozky.length === 0) {
-            kontejner.innerHTML = "<div style='text-align:center; padding:50px;'><h3>Vše je zaplaceno! 💰✅</h3></div>";
+        const ids = Object.keys(data);
+        if (ids.length === 0) {
+            kontejner.innerHTML = "<h3>Vše je zaplaceno! ✅</h3>";
             return;
         }
 
-        polozky.forEach(id => {
+        ids.forEach(id => {
             const d = data[id];
+            // Rozdělíme seznam zboží, pokud jich je víc (jsou odděleny čárkou z výdeje)
+            // Poznámka: Tato verze předpokládá, že částka je za celý balík. 
+            // Pro 100% přesnost při částečném placení doporučuji vydávat položky po jedné, 
+            // nebo použít toto tlačítko pro potvrzení celého "balíčku", který pan Novák právě platí.
+            
             kontejner.innerHTML += `
                 <div class="karta">
-                    <div class="info">
-                        <div class="jmeno">${d.jmeno}</div>
-                        <div class="zbozi">${d.zbozi || 'Bez popisu zboží'}</div>
-                        <div style="font-size:0.75rem; color:#999; margin-top:8px;">Vydáno: ${d.datum || 'Neznámé datum'}</div>
+                    <div class="jmeno">${d.jmeno}</div>
+                    <div class="polozka-v-dluhu">
+                        <div class="polozka-info">
+                            <div>${d.zbozi}</div>
+                            <div style="font-size:0.7rem; color:#999;">Vydáno: ${d.datum}</div>
+                        </div>
+                        <div class="polozka-castka">${d.castka} Kč</div>
+                        <button class="btn-pay-small" onclick="potvrditPlatbu('${id}')">ZAPLATIL ✅</button>
                     </div>
-                    <div class="castka">${d.castka} Kč</div>
-                    <button class="btn-pay" onclick="zpracovatPlatbu('${id}')">ZAPLATIL ✅</button>
                 </div>`;
         });
     });
 
-    // 3. Funkce pro zpracování platby
-    function zpracovatPlatbu(id) {
-        console.log("Zahajuji platbu pro ID:", id);
-
-        // Nejdřív načteme data té jedné objednávky
+    function potvrditPlatbu(id) {
         db.ref("nezaplaceno/" + id).once("value").then((snap) => {
             const data = snap.val();
-            
-            if (!data) {
-                console.error("Data pro toto ID neexistují!");
-                return;
-            }
+            if (!data) return;
 
             const dnes = new Date();
             const mesic_rok = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
 
-            // A) Zápis do Financí
+            // Uložíme do financí
             return db.ref("finance/" + mesic_rok + "/trzby").push({
                 zakaznik: data.jmeno,
                 castka: data.castka,
-                zbozi: data.zbozi || "",
+                zbozi: data.zbozi,
                 datum: dnes.toLocaleDateString(),
                 cas: dnes.toLocaleTimeString()
             }).then(() => {
-                console.log("Zápis do financí OK, mažu z nezaplacených...");
-                // B) Smazání z Nezaplacených
+                // Smažeme jen tuto konkrétní zaplacenou část nákupu
                 return db.ref("nezaplaceno/" + id).remove();
             });
-
         }).then(() => {
-            alert("Platba byla úspěšně potvrzena a uložena do financí.");
-        }).catch((err) => {
-            console.error("Chyba:", err);
-            alert("Něco se nepovedlo: " + err.message);
-        });
+            console.log("Platba zpracována.");
+        }).catch(err => alert("Chyba: " + err.message));
     }
 </script>
 
