@@ -3,117 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Administrace Prodeje</title>
+    <title>Admin - Hlavní Rozcestník</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; --finance: #00c853; --vydej: #e65100; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; }
-        
-        .hlavicka { 
-            background: var(--primary); color: white; padding: 15px 25px; 
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+        :root { 
+            --primary: #1a237e; --accent: #3949ab; --bg: #f4f7f9;
+            --sklad: #546e7a; --vydej: #ff6f00; --dluh: #d32f2f; --finance: #2e7d32;
         }
-        .hlavicka h1 { margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 1.3rem; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        h1 { color: var(--primary); text-align: center; text-transform: uppercase; letter-spacing: 2px; }
 
-        .btn-finance-top { 
-            background: var(--finance); color: white; text-decoration: none; 
-            padding: 10px 20px; border-radius: 8px; font-weight: bold; 
-            transition: 0.3s; border: 2px solid rgba(255,255,255,0.2);
+        /* HLAVNÍ ROZCESTNÍK */
+        .menu-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 30px; 
         }
-        .btn-finance-top:hover { background: #00e676; transform: scale(1.05); }
-
-        #status-bar { background: #ffeb3b; color: #000; text-align: center; padding: 5px; font-size: 0.8rem; font-weight: bold; display: none; }
-
-        .obsah { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-        
-        .sidebar { display: flex; flex-direction: column; gap: 15px; }
-        .sidebar-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .sidebar-box h3 { margin-top: 0; color: var(--primary); font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-        
-        /* Styl pro velké tlačítko výdeje v sidebaru */
-        .btn-velky-vydej {
-            display: block; background: var(--vydej); color: white; text-decoration: none;
-            padding: 20px; border-radius: 12px; text-align: center; font-weight: 900;
-            font-size: 1.2rem; box-shadow: 0 4px 0 #bf360c; transition: 0.2s;
-            margin-bottom: 10px;
+        .menu-item { 
+            text-decoration: none; color: white; padding: 25px 15px; 
+            border-radius: 12px; text-align: center; font-weight: bold; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
         }
-        .btn-velky-vydej:active { transform: translateY(3px); box-shadow: none; }
-
-        .polozka-box { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .polozka-listu { flex: 1; padding: 12px 15px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: #333; font-weight: bold; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .polozka-listu:hover { background: #e3f2fd; border-color: #1976d2; color: #1976d2; }
+        .menu-item i { font-size: 2rem; }
+        .menu-item:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); opacity: 0.9; }
         
-        .btn-smazat-produkt { background: #fff5f5; color: var(--danger); border: 1px solid #ffcdd2; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 40px; text-align: center; }
+        .m-sklad { background: var(--sklad); }
+        .m-vydej { background: var(--vydej); }
+        .m-dluh { background: var(--dluh); }
+        .m-finance { background: var(--finance); }
 
-        .hlavni-panel { display: flex; flex-direction: column; gap: 20px; }
-        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .box h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; background: #f8f9fa; padding: 12px 10px; font-size: 0.85rem; color: #666; text-transform: uppercase; }
-        td { padding: 15px 10px; border-bottom: 1px solid #eee; }
-        .dluh-castka { color: var(--danger); font-weight: 800; }
+        /* SEKCE NABÍDKA */
+        .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .box h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; color: var(--primary); }
         
-        .btn-zaplaceno { background: var(--success); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .input-group { display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; margin-bottom: 20px; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
-        .suma-area { text-align: right; margin-top: 20px; padding-top: 15px; border-top: 2px solid #eee; }
-        .suma-text { font-size: 1.4rem; font-weight: 900; color: var(--danger); }
+        .seznam-zbozi { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .zbozi-karta { 
+            background: #f8f9fa; border: 1px solid #eee; padding: 12px; 
+            border-radius: 8px; display: flex; justify-content: space-between; align-items: center; 
+        }
+        .btn-delete { color: #d32f2f; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
 
-        .input-group { display: flex; flex-direction: column; gap: 10px; }
-        input { padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; }
-        .btn-pridat { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-
-        @media (max-width: 800px) { .obsah { grid-template-columns: 1fr; } .hlavicka { flex-direction: column; gap: 10px; } }
+        @media (max-width: 600px) { .input-group { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-<div id="status-bar">⚠️ PŘIPOJOVÁNÍ K DATABÁZI...</div>
+<div class="container">
+    <h1>Správa prodeje</h1>
 
-<div class="hlavicka">
-    <h1>ADMINISTRACE PRODEJE</h1>
-    <a href="finance.html" class="btn-finance-top">📊 ZISKY A FINANCE</a>
-</div>
-
-<div class="obsah">
-    <div class="sidebar">
-        <a href="kompletni-vydej.html" class="btn-velky-vydej">🚚 VÝDEJ (KARTY LIDÍ)</a>
-
-        <div class="sidebar-box">
-            <h3>📂 LISTY K VÁŽENÍ</h3>
-            <div id="produkty-seznam">Načítám data...</div>
-        </div>
+    <div class="menu-grid">
+        <a href="sklad.html" class="menu-item m-sklad">
+            <span>📦</span> CELKEM DO SKLADU
+            <small style="font-weight: normal; font-size: 0.7rem;">(Kolik kg celkem připravit)</small>
+        </a>
+        <a href="vydej.html" class="menu-item m-vydej">
+            <span>🚚</span> VÝDEJ ZÁKAZNÍKŮM
+            <small style="font-weight: normal; font-size: 0.7rem;">(Karty lidí + tlačítko POSLÁNO)</small>
+        </a>
+        <a href="nezaplaceno.html" class="menu-item m-dluh">
+            <span>🔴</span> NEZAPLACENO
+            <small style="font-weight: normal; font-size: 0.7rem;">(Vydané zboží čekající na peníze)</small>
+        </a>
+        <a href="finance.html" class="menu-item m-finance">
+            <span>💰</span> FINANCE
+            <small style="font-weight: normal; font-size: 0.7rem;">(Historie plateb)</small>
+        </a>
     </div>
 
-    <div class="hlavni-panel">
-        <div class="box" style="border-top: 5px solid var(--danger);">
-            <h3>🔴 SEZNAM DLUŽNÍKŮ</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Jméno</th>
-                        <th>Zboží</th>
-                        <th>Částka</th>
-                        <th style="text-align:right">Akce</th>
-                    </tr>
-                </thead>
-                <tbody id="dluhy-tabulka"></tbody>
-            </table>
-            <div class="suma-area" id="suma-box" style="display:none;">
-                <span class="suma-text" id="celkovy-dluh"></span>
-            </div>
+    <div class="box">
+        <h3>➕ EDITACE NABÍDKY</h3>
+        <div class="input-group">
+            <input type="text" id="nazev" placeholder="Název produktu (např. Jablka)">
+            <input type="number" id="cena" placeholder="Cena za kg">
+            <button class="btn-add" onclick="pridat()">PŘIDAT</button>
         </div>
 
-        <div class="box">
-            <h3>➕ PŘIDAT NOVÉ ZBOŽÍ</h3>
-            <div class="input-group">
-                <input type="text" id="novy-nazev" placeholder="Název (např. Klobásy)">
-                <input type="number" id="nova-cena" placeholder="Cena za kg (Kč)">
-                <button class="btn-pridat" onclick="vytvoritProdukt()">PŘIDAT DO NABÍDKY</button>
+        <div id="seznam" class="seznam-zbozi">
             </div>
-        </div>
     </div>
 </div>
 
@@ -121,61 +96,38 @@
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const status = document.getElementById("status-bar");
 
-    db.ref(".info/connected").on("value", (snap) => {
-        status.style.display = (snap.val() === true) ? "none" : "block";
-    });
-
+    // Načítání nabídky
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
-        const div = document.getElementById("produkty-seznam");
+        const div = document.getElementById("seznam");
         div.innerHTML = "";
-        Object.keys(data).sort().forEach(nazev => {
+        Object.keys(data).sort().forEach(key => {
             div.innerHTML += `
-                <div class="polozka-box">
-                    <a href="rozpis.html?filtr=${encodeURIComponent(nazev)}" class="polozka-listu">${nazev}</a>
-                    <button class="btn-smazat-produkt" onclick="smazatProdukt('${nazev}')">✕</button>
+                <div class="zbozi-karta">
+                    <span><strong>${key}</strong>: ${data[key]} Kč</span>
+                    <button class="btn-delete" onclick="smazat('${key}')">✕</button>
                 </div>`;
         });
     });
 
-    db.ref("dluhy").on("value", (snap) => {
-        const data = snap.val() || {};
-        const tabulka = document.getElementById("dluhy-tabulka");
-        const sumaTxt = document.getElementById("celkovy-dluh");
-        const sumaBox = document.getElementById("suma-box");
-        tabulka.innerHTML = "";
-        let suma = 0;
-        let counter = 0;
-
-        for (let id in data) {
-            const d = data[id];
-            suma += parseInt(d.castka || 0);
-            counter++;
-            tabulka.innerHTML += `<tr><td><strong>${d.jmeno}</strong></td><td><small>${d.zbozi || ''}</small></td><td class="dluh-castka">${d.castka} Kč</td><td style="text-align:right"><button class="btn-zaplaceno" onclick="db.ref('dluhy/${id}').remove()">ZAPLACENO</button></td></tr>`;
-        }
-        if (counter > 0) { sumaBox.style.display = "block"; sumaTxt.innerText = "CELKEM CHYBÍ: " + suma + " Kč"; }
-        else { sumaBox.style.display = "none"; tabulka.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:green;">Žádné dluhy ✅</td></tr>'; }
-    });
-
-    function smazatProdukt(nazev) {
-        if (confirm(`Smazat list "${nazev}"?`)) {
-            db.ref("produkty/" + nazev).remove();
-            db.ref("objednavky/" + nazev).remove();
-        }
-    }
-
-    function vytvoritProdukt() {
-        const n = document.getElementById("novy-nazev").value.trim();
-        const c = document.getElementById("nova-cena").value.trim();
-        if (n && c) {
+    function pridat() {
+        const n = document.getElementById("nazev").value.trim();
+        const c = document.getElementById("cena").value.trim();
+        if(n && c) {
             db.ref("produkty/" + n).set(parseInt(c)).then(() => {
-                document.getElementById("novy-nazev").value = "";
-                document.getElementById("nova-cena").value = "";
+                document.getElementById("nazev").value = "";
+                document.getElementById("cena").value = "";
             });
         }
     }
+
+    function smazat(k) {
+        if(confirm(`Opravdu smazat ${k} z nabídky?`)) {
+            db.ref("produkty/" + k).remove();
+        }
+    }
 </script>
+
 </body>
 </html>
