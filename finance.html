@@ -3,105 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance - Celkový přehled</title>
+    <title>Finance - Přehled tržeb</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --danger: #d32f2f; --success: #2e7d32; --bg: #f4f4f4; --total: #4527a0; }
+        :root { --primary: #1a237e; --money: #2e7d32; --bg: #f0f2f5; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         
-        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 20px; }
-        
-        /* Box pro celkový souhrn vpravo */
-        .total-summary { 
-            background: var(--total); color: white; padding: 15px 25px; border-radius: 12px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: right; min-width: 200px;
-        }
-        .total-summary span { display: block; font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; }
-        .total-summary strong { font-size: 1.8rem; display: block; }
+        .suma-box { background: var(--money); color: white; padding: 25px; border-radius: 15px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3); }
+        .suma-castka { font-size: 2.5rem; font-weight: 900; display: block; }
+        .suma-label { font-size: 0.9rem; text-transform: uppercase; opacity: 0.9; letter-spacing: 1px; }
 
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        
-        .mesic-nav { display: flex; align-items: center; gap: 15px; background: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 20px; justify-content: center; border: 1px solid #ddd; }
-        select { padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: bold; cursor: pointer; }
-
-        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .stat-box { padding: 15px; border-radius: 10px; text-align: center; color: white; }
-        .stat-trzby { background: var(--primary); }
-        .stat-naklady { background: var(--danger); }
-        .stat-zisk { background: var(--success); }
-        .stat-val { font-size: 1.5rem; font-weight: 900; display: block; }
-        
-        .form-group { display: flex; gap: 10px; margin-top: 10px; }
-        input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; flex: 1; }
-        .btn-add { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
-        .btn-reset { background: #555; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; margin-top: 5px; }
-
+        .vypis-karta { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; font-size: 0.8rem; color: #666; padding: 10px; border-bottom: 2px solid #eee; }
-        td { padding: 12px 10px; border-bottom: 1px solid #eee; }
-        .text-danger { color: var(--danger); font-weight: bold; }
-        .btn-del { color: #ccc; border: none; background: none; cursor: pointer; font-size: 1.2rem; }
-
-        @media (max-width: 600px) { .header-top { flex-direction: column; } .stats { grid-template-columns: 1fr; } }
+        th { text-align: left; padding: 12px; border-bottom: 2px solid #eee; color: #666; font-size: 0.8rem; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #f1f1f1; font-size: 0.95rem; }
+        .cena-bunka { font-weight: bold; color: var(--money); text-align: right; }
+        
+        .zpet-btn { text-decoration: none; color: var(--primary); font-weight: bold; border: 1px solid var(--primary); padding: 8px 15px; border-radius: 6px; }
+        .datum-text { font-size: 0.75rem; color: #999; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header-top">
-        <div>
-            <h1 style="margin:0">📊 Správa financí</h1>
-            <a href="admin.html" style="text-decoration:none; color:#1a237e; font-weight:bold; font-size: 0.9rem;">← ZPĚT DO ADMINA</a><br>
-            <button class="btn-reset" onclick="vynulovatData()">⚠️ VYNULOVAT VYBRANÝ MĚSÍC</button>
-        </div>
-        
-        <div class="total-summary">
-            <span>Celkový čistý zisk</span>
-            <strong id="celkova-bilance">0 Kč</strong>
-            <small style="font-size: 0.6rem; opacity: 0.7;">(Součet všech měsíců)</small>
-        </div>
-    </div>
+<div class="header">
+    <h2 style="margin:0; color:var(--primary);">💰 FINANCE</h2>
+    <a href="admin.html" class="zpet-btn">🏠 ADMIN</a>
+</div>
 
-    <div class="mesic-nav">
-        <span>Vybrat období pro detaily:</span>
-        <select id="select-mesic" onchange="nactiData()">
-            </select>
-    </div>
+<div class="suma-box">
+    <span class="suma-label">Celková tržba za tento měsíc</span>
+    <span id="celkova-trzba" class="suma-castka">0 Kč</span>
+</div>
 
-    <div class="stats">
-        <div class="stat-box stat-trzby">
-            <span style="font-size:0.8rem">TRŽBY (MĚSÍC)</span>
-            <span class="stat-val" id="total-trzby">0 Kč</span>
-        </div>
-        <div class="stat-box stat-naklady">
-            <span style="font-size:0.8rem">NÁKLADY (MĚSÍC)</span>
-            <span class="stat-val" id="total-naklady">0 Kč</span>
-        </div>
-        <div class="stat-box stat-zisk">
-            <span style="font-size:0.8rem">ZISK (MĚSÍC)</span>
-            <span class="stat-val" id="total-zisk">0 Kč</span>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3>➕ Přidat náklad pro vybraný měsíc</h3>
-        <div class="form-group">
-            <input type="text" id="naklad-co" placeholder="Za co...">
-            <input type="number" id="naklad-kolik" placeholder="Kč">
-            <button class="btn-add" onclick="pridatNaklad()">ULOŽIT</button>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3>📉 Historie nákladů vybraného měsíce</h3>
-        <table>
-            <thead><tr><th>Datum</th><th>Popis</th><th style="text-align:right">Částka</th><th></th></tr></thead>
-            <tbody id="seznam-nakladu"></tbody>
-        </table>
-    </div>
+<div class="vypis-karta">
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Zákazník / Položky</th>
+                <th style="text-align:right">Částka</th>
+            </tr>
+        </thead>
+        <tbody id="tabulka-financi">
+            </tbody>
+    </table>
 </div>
 
 <script>
@@ -109,103 +56,46 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Generování měsíců
-    const select = document.getElementById("select-mesic");
-    const mesiceNazvy = ["Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"];
+    // Určíme aktuální měsíc (stejně jako v nezaplaceno.html)
     const dnes = new Date();
-    for(let i = 0; i < 12; i++) {
-        let m = dnes.getMonth() + i;
-        let r = dnes.getFullYear();
-        if (m > 11) { r += 1; m = m % 12; }
-        let val = (m + 1) + "_" + r;
-        let opt = document.createElement("option");
-        opt.value = val;
-        opt.innerHTML = mesiceNazvy[m] + " " + r;
-        select.appendChild(opt);
-    }
+    const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
 
-    // --- HLAVNÍ FUNKCE PRO CELKOVÝ SOUHRN ---
-    function vypocitejCelkovouBilanci() {
-        db.ref("finance").on("value", (snap) => {
-            const vsechnaData = snap.val() || {};
-            let celkoveTrzby = 0;
-            let celkoveNaklady = 0;
-
-            for (let mesicId in vsechnaData) {
-                const mesic = vsechnaData[mesicId];
-                // Sečti tržby v tomto měsíci
-                if (mesic.trzby) {
-                    for (let tId in mesic.trzby) celkoveTrzby += parseInt(mesic.trzby[tId].castka || 0);
-                }
-                // Sečti náklady v tomto měsíci
-                if (mesic.naklady) {
-                    for (let nId in mesic.naklady) celkoveNaklady += parseInt(mesic.naklady[nId].castka || 0);
-                }
-            }
-            document.getElementById("celkova-bilance").innerText = (celkoveTrzby - celkoveNaklady) + " Kč";
-        });
-    }
-
-    function nactiData() {
-        const obdobi = document.getElementById("select-mesic").value;
+    db.ref("finance/" + obdobi + "/trzby").on("value", (snap) => {
+        const data = snap.val() || {};
+        const tabulka = document.getElementById("tabulka-financi");
+        const sumaSpan = document.getElementById("celkova-trzba");
         
-        db.ref("finance/" + obdobi + "/trzby").on("value", (snap) => {
-            let trzby = 0;
-            const data = snap.val() || {};
-            for (let id in data) trzby += parseInt(data[id].castka || 0);
-            document.getElementById("total-trzby").innerText = trzby + " Kč";
-            aktualizujZisk();
+        let celkem = 0;
+        let html = "";
+
+        // Převedeme na pole, abychom mohli položky seřadit od nejnovější
+        const polozky = [];
+        for (let id in data) {
+            polozky.push(data[id]);
+        }
+        polozky.reverse(); // Nejnovější nahoře
+
+        polozky.forEach(p => {
+            celkem += parseInt(p.castka || 0);
+            html += `
+                <tr>
+                    <td>
+                        <div style="font-weight:bold">${p.datum}</div>
+                        <div class="datum-text">${p.cas || ''}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:bold">${p.zakaznik}</div>
+                        <div style="font-size:0.8rem; color:#666">${p.zbozi}</div>
+                    </td>
+                    <td class="cena-bunka">${p.castka} Kč</td>
+                </tr>
+            `;
         });
 
-        db.ref("finance/" + obdobi + "/naklady").on("value", (snap) => {
-            let naklady = 0;
-            const div = document.getElementById("seznam-nakladu");
-            div.innerHTML = "";
-            const data = snap.val() || {};
-            for (let id in data) {
-                const n = data[id];
-                naklady += parseInt(n.castka || 0);
-                div.innerHTML += `<tr><td><small>${n.datum}</small></td><td>${n.popis}</td><td style="text-align:right" class="text-danger">-${n.castka} Kč</td><td style="text-align:right"><button class="btn-del" onclick="smazatNaklad('${id}')">✕</button></td></tr>`;
-            }
-            document.getElementById("total-naklady").innerText = naklady + " Kč";
-            aktualizujZisk();
-        });
-    }
-
-    function aktualizujZisk() {
-        const t = parseInt(document.getElementById("total-trzby").innerText) || 0;
-        const n = parseInt(document.getElementById("total-naklady").innerText) || 0;
-        document.getElementById("total-zisk").innerText = (t - n) + " Kč";
-    }
-
-    function pridatNaklad() {
-        const obdobi = document.getElementById("select-mesic").value;
-        const co = document.getElementById("naklad-co").value.trim();
-        const kolik = document.getElementById("naklad-kolik").value.trim();
-        if(co && kolik) {
-            db.ref("finance/" + obdobi + "/naklady").push({
-                popis: co, castka: parseInt(kolik), datum: new Date().toLocaleDateString()
-            });
-            document.getElementById("naklad-co").value = "";
-            document.getElementById("naklad-kolik").value = "";
-        }
-    }
-
-    function smazatNaklad(id) {
-        const obdobi = document.getElementById("select-mesic").value;
-        db.ref("finance/" + obdobi + "/naklady/" + id).remove();
-    }
-
-    function vynulovatData() {
-        const obdobi = document.getElementById("select-mesic").value;
-        if(confirm("Opravdu smazat data pro " + obdobi + "?")) {
-            db.ref("finance/" + obdobi).remove();
-        }
-    }
-
-    // Spuštění
-    nactiData();
-    vypocitejCelkovouBilanci();
+        tabulka.innerHTML = html || "<tr><td colspan='3' style='text-align:center; padding:30px;'>Zatím žádné tržby za tento měsíc.</td></tr>";
+        sumaSpan.innerText = celkem.toLocaleString() + " Kč";
+    });
 </script>
+
 </body>
 </html>
