@@ -1,132 +1,16 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Výdej - Karty</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        :root { --primary: #1a237e; --vydej: #ff6f00; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .karta-zakaznik { background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid var(--vydej); }
-        .hlavicka-karty { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; margin-bottom: 8px; padding-bottom: 5px; }
-        .jmeno { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
-        .polozka { display: grid; grid-template-columns: 2fr 1fr 1fr 80px; align-items: center; gap: 10px; padding: 5px 0; font-size: 0.9rem; border-bottom: 1px solid #f9f9f9; }
-        input { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
-        .paticka { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee; }
-        .cena-celkem { font-size: 1.4rem; font-weight: 900; color: #d32f2f; }
-        .btn-vydano { background: var(--vydej); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-vydano:hover { background: #e65100; transform: scale(1.02); }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0; color:var(--primary);">KARTY K VÝDEJI</h2>
-        <a href="admin.html" style="text-decoration:none; font-weight:bold;">← ZPĚT</a>
-    </div>
-    <div id="seznam-karet">Načítám objednávky...</div>
+<div style="background: white; padding: 10px 20px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000;">
+    <h2 style="margin:0; color:var(--primary); font-size: 1.1rem;">🚚 VÝDEJ ZBOŽÍ</h2>
+    <a href="admin.html" style="
+        background: var(--primary); 
+        color: white; 
+        text-decoration: none; 
+        padding: 8px 15px; 
+        border-radius: 6px; 
+        font-weight: bold; 
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;">
+        🏠 ZPĚT DO ADMINU
+    </a>
 </div>
-
-<script>
-    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    let cenyProduktu = {};
-    db.ref("produkty").once("value", (snapshot) => {
-        cenyProduktu = snapshot.val() || {};
-        nactiObjednavky();
-    });
-
-    function nactiObjednavky() {
-        db.ref("objednavky").on("value", (snapshot) => {
-            if (document.activeElement.tagName === "INPUT") return;
-            const data = snapshot.val() || {};
-            const lide = {};
-
-            for (let produkt in data) {
-                for (let id in data[produkt]) {
-                    const obj = data[produkt][id];
-                    if (!obj.vydano) { // Zobrazíme jen ty, co ještě NEJSOU vydané
-                        if (!lide[obj.zakaznik]) lide[obj.zakaznik] = { polozky: [] };
-                        lide[obj.zakaznik].polozky.push({ ...obj, produkt: produkt, id: id });
-                    }
-                }
-            }
-            vykresli(lide);
-        });
-    }
-
-    function vykresli(lide) {
-        const kontejner = document.getElementById("seznam-karet");
-        kontejner.innerHTML = "";
-        
-        if (Object.keys(lide).length === 0) {
-            kontejner.innerHTML = "<div style='text-align:center; padding:20px;'>Všechny objednávky jsou vydané! ✅</div>";
-            return;
-        }
-
-        for (let jm in lide) {
-            let htmlPolozky = "";
-            let celkem = 0;
-            let vypisZbozi = [];
-
-            lide[jm].polozky.forEach(p => {
-                const cenaKg = cenyProduktu[p.produkt] || 0;
-                const vaha = p.skutecna_vaha_gr || 0;
-                const cenaCislo = Math.round((vaha / 1000) * cenaKg);
-                celkem += cenaCislo;
-                vypisZbozi.push(`${p.produkt} (${vaha}g)`);
-
-                htmlPolozky += `
-                    <div class="polozka">
-                        <div style="font-weight:bold">${p.produkt}</div>
-                        <div style="color:#666">Obj: ${p.vaha_objednano}kg</div>
-                        <div><input type="number" value="${vaha || ''}" onchange="ulozVahu('${p.produkt}','${p.id}', this.value)"> gr</div>
-                        <div style="text-align:right; font-weight:bold">${cenaCislo} Kč</div>
-                    </div>`;
-            });
-
-            kontejner.innerHTML += `
-                <div class="karta-zakaznik">
-                    <div class="hlavicka-karty"><span class="jmeno">${jm}</span></div>
-                    ${htmlPolozky}
-                    <div class="paticka">
-                        <div class="cena-celkem">${celkem} Kč</div>
-                        <button class="btn-vydano" onclick="vydatZbozi('${jm}', ${celkem}, '${vypisZbozi.join(', ')}', ${JSON.stringify(lide[jm].polozky)})">
-                            Vydáno (Nezaplaceno)
-                        </button>
-                    </div>
-                </div>`;
-        }
-    }
-
-    function ulozVahu(prod, id, v) {
-        db.ref("objednavky/" + prod + "/" + id).update({ skutecna_vaha_gr: parseInt(v) || 0 });
-    }
-
-    function vydatZbozi(jm, castka, textZbozi, polozky) {
-        if (castka <= 0) { alert("Zadej nejdřív váhu u produktů!"); return; }
-
-        // 1. Přesunout do seznamu Nezaplaceno
-        db.ref("nezaplaceno").push({
-            jmeno: jm,
-            castka: castka,
-            zbozi: textZbozi,
-            datum: new Date().toLocaleDateString()
-        });
-
-        // 2. Označit objednávky jako vydané (aby zmizely z této stránky)
-        polozky.forEach(p => {
-            db.ref("objednavky/" + p.produkt + "/" + p.id).update({ vydano: true });
-        });
-
-        alert("Vydáno! Najdeš to v sekci NEZAPLACENO.");
-    }
-</script>
-</body>
-</html>
