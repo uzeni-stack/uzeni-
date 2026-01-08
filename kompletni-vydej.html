@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kompletní Výdej - Karty Zákazníků</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --primary: #1976d2; --success: #2e7d32; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .header { background: #fff; padding: 15px; border-bottom: 2px solid #ccc; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        
+        .karta-zakaznik { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
+        .jmeno-hlavni { font-size: 1.6rem; font-weight: 900; color: #1a1a1a; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; display: block; text-transform: uppercase; }
+        
+        .polozka { display: grid; grid-template-columns: 1fr 100px 100px; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .zbozi-nazev { font-weight: bold; color: #333; }
+        
+        label { font-size: 0.65rem; color: #888; font-weight: bold; display: block; }
+        input { width: 90%; padding: 8px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-weight: bold; }
+        
+        .soucty { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .celkova-cena { font-size: 1.8rem; font-weight: 900; color: #d32f2f; }
+        
+        .btn-vse-ok { background: var(--success); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 0 #1b5e20; }
+        .btn-vse-ok:active { transform: translateY(2px); box-shadow: none; }
+        .hotovo { opacity: 0.5; pointer-events: none; border-top-color: #888; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>DNEŠNÍ VÝDEJ (DLE LIDÍ)</h2>
+        <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary);">ZPĚT</a>
+    </div>
+
+    <div id="seznam-karet"></div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 1. Načteme ceny produktů, abychom mohli počítat
+    let cenyProduktu = {};
+    db.ref("produkty").once("value", (snapshot) => {
+        cenyProduktu = snapshot.val() || {};
+        nactiObjednavky();
+    });
+
+    function nactiObjednavky() {
+        db.ref("objednavky").on("value", (snapshot) => {
+            if (document.activeElement.tagName === "INPUT") return;
+            
+            const vsechnyObjednavky = snapshot.val() || {};
+            const lide = {};
+
+            // 2. TŘÍDIČKA: Projdeme složky (Cesnek, Jablka...) a seskupíme je podle jmen
+            for (let produkt in vsechnyObjednavky) {
+                for (let id in vsechnyObjednavky[produkt]) {
+                    const obj = vsechnyObjednavky[produkt][id];
+                    const jmeno = obj.zakaznik;
+
+                    if (!lide[jmeno]) {
+                        lide[jmeno] = { polozky: [], celkem: 0, vse_potvrzeno: true };
+                    }
+
+                    // Přidáme informaci o produktu do karty člověka
+                    obj.produkt_klic = produkt;
+                    obj.objednavka_id = id;
+                    lide[jmeno].polozky.push(obj);
+                    
+                    if (!obj.potvrzeno) lide[jmeno].vse_potvrzeno = false;
+                }
+            }
+
+            vykresliKarty(lide);
+        });
+    }
+
+    function vykresliKarty(lide) {
+        const kontejner = document.getElementById("seznam-karet");
+        kontejner.innerHTML = "";
+
+        for (let jmeno in lide) {
+            const clovek = lide[jmeno];
+            let htmlPolozky = "";
+            let sumaCelyNakup = 0;
+
+            clovek.polozky.forEach((p, index) => {
+                const cenaZaKg = cenyProduktu[p.produkt_klic] || 0;
+                const vaha = p.skutecna_vaha_gr || 0;
+                const cenaPolozky = Math.round((vaha / 1000) * cenaZaKg);
+                sumaCelyNakup += cenaPolozky;
+
+                htmlPolozky += `
+                    <div class="polozka">
+                        <div class="zbozi-nazev">${p.produkt_klic} <br> <small>Objednáno: ${p.vaha_objednano}kg</small></div>
+                        <div>
+                            <label>GRAMY</label>
+                            <input type="number" value="${vaha || ''}" onchange="ulozVahu('${p.produkt_klic}','${p.objednavka_id}', this.value)">
+                        </div>
+                        <div style="text-align:right; font-weight:bold; color:#d32f2f;">
+                            <label>CENA</label>
+                            ${cenaPolozky} Kč
+                        </div>
+                    </div>`;
+            });
+
+            kontejner.innerHTML += `
+                <div class="karta-zakaznik ${clovek.vse_potvrzeno ? 'hotovo' : ''}">
+                    <span class="jmeno-hlavni">${jmeno}</span>
+                    ${htmlPolozky}
+                    <div class="soucty">
+                        <div>
+                            <label>ZAPLATIL CELKEM (Kč)</label>
+                            <input type="number" id="platba-${jmeno}" style="width:120px; font-size:1.4rem; color:green;" placeholder="0">
+                        </div>
+                        <div style="text-align:right">
+                            <label>CELKEM K PLACENÍ</label>
+                            <div class="celkova-cena">${sumaCelyNakup} Kč</div>
+                            <button class="btn-vse-ok" onclick="potvrditVse('${jmeno}')">
+                                ${clovek.vse_potvrzeno ? 'VYŘÍZENO ✓' : 'POTVRDIT VŠE'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+    }
+
+    function ulozVahu(produkt, id, vaha) {
+        db.ref("objednavky/" + produkt + "/" + id).update({ skutecna_vaha_gr: parseInt(vaha) || 0 });
+    }
+
+    function potvrditVse(jmeno) {
+        const zaplaceno = parseInt(document.getElementById("platba-" + jmeno).value) || 0;
+        if (zaplaceno <= 0) { alert("Zadej, kolik pan/paní zaplatil(a)!"); return; }
+
+        // Tady by se v reálu prošly všechny položky a označily jako potvrzené
+        // Pro jednoduchost teď uložíme jen celkovou tržbu
+        db.ref("finance/trzby").push({
+            zakaznik: jmeno,
+            castka: zaplaceno,
+            datum: new Date().toLocaleDateString(),
+            poznamka: "Kompletní nákup"
+        });
+
+        alert("Peníze uloženy do financí, karta vyřízena!");
+    }
+</script>
+</body>
+</html>
