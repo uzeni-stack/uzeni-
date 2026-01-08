@@ -3,49 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Výdej - Karty Zákazníků</title>
+    <title>Výdej - Kompaktní</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --success: #2e7d32; --bg: #e9ecef; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        :root { --primary: #1a237e; --success: #2e7d32; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
         
-        .header { background: #fff; padding: 10px 20px; border-bottom: 2px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
-        .header h2 { margin: 0; font-size: 1.1rem; color: var(--primary); }
+        /* Omezení šířky celé stránky */
+        .container { max-width: 800px; margin: 0 auto; }
         
-        /* Omezení šířky pro PC */
-        .container { max-width: 900px; margin: 20px auto; padding: 0 10px; }
+        .karta-zakaznik { 
+            background: white; border-radius: 8px; padding: 10px 15px; 
+            margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            border-left: 5px solid var(--primary); 
+        }
+
+        .hlavicka-karty { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; margin-bottom: 8px; padding-bottom: 5px; }
+        .jmeno { font-size: 1.1rem; font-weight: 800; color: #111; text-transform: uppercase; }
+
+        .polozka { 
+            display: grid; 
+            grid-template-columns: 2fr 1fr 1fr 80px; /* Pevné rozdělení sloupců */
+            align-items: center; 
+            gap: 10px;
+            padding: 4px 0;
+            border-bottom: 1px solid #f9f9f9;
+            font-size: 0.85rem;
+        }
+
+        .zbozi-nazev { font-weight: bold; }
+        .zbozi-obj { color: #666; font-size: 0.75rem; }
         
-        .karta-zakaznik { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid var(--primary); }
-        .jmeno-hlavni { font-size: 1.3rem; font-weight: 800; color: #1a1a1a; display: block; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
+        .vstup-vaha { display: flex; align-items: center; gap: 4px; }
+        .vstup-vaha input { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; font-size: 0.85rem; }
         
-        .polozka { display: grid; grid-template-columns: 1fr 100px 100px; gap: 15px; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; }
-        .zbozi-info { line-height: 1.2; }
-        .zbozi-nazev { font-weight: bold; color: #333; font-size: 0.95rem; }
-        .zbozi-obj { font-size: 0.75rem; color: #777; }
+        .polozka-cena { text-align: right; font-weight: bold; color: #d32f2f; }
+
+        .paticka-karty { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            align-items: center; 
+            margin-top: 10px; 
+            padding-top: 10px; 
+            border-top: 2px solid #eee;
+        }
+
+        .suma-vysledek { font-size: 1.4rem; font-weight: 900; color: #d32f2f; text-align: right; }
         
-        label { font-size: 0.6rem; color: #999; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; display: block; }
-        input { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 5px; text-align: center; font-weight: bold; box-sizing: border-box; }
+        .vstup-platba { display: flex; align-items: center; gap: 8px; }
+        .vstup-platba input { width: 90px; padding: 6px; border: 2px solid var(--success); border-radius: 5px; font-weight: bold; text-align: center; }
+
+        .btn-ok { background: var(--success); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-left: 10px; }
         
-        .soucty-box { background: #f8f9fa; margin-top: 10px; padding: 10px; border-radius: 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
-        .cena-celkem-label { font-size: 0.7rem; color: #666; font-weight: bold; }
-        .cena-celkem-hodnota { font-size: 1.5rem; font-weight: 900; color: #d32f2f; line-height: 1; }
-        
-        .btn-vse-ok { background: var(--success); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-vse-ok:hover { background: #1b5e20; }
-        
-        .hotovo { opacity: 0.6; background: #f1f1f1; border-left-color: #aaa; }
+        @media (max-width: 600px) {
+            .polozka { grid-template-columns: 1.5fr 1fr 1fr 70px; gap: 5px; font-size: 0.75rem; }
+            .vstup-vaha input { width: 45px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h2>DNEŠNÍ VÝDEJ (DLE LIDÍ)</h2>
-        <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary); font-size: 0.9rem;">← ZPĚT</a>
-    </div>
-
-    <div class="container" id="seznam-karet">
-        </div>
+    <div class="container" id="seznam-karet"></div>
 
 <script>
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -67,9 +86,8 @@
             for (let produkt in data) {
                 for (let id in data[produkt]) {
                     const obj = data[produkt][id];
-                    const jm = obj.zakaznik;
-                    if (!lide[jm]) lide[jm] = { polozky: [] };
-                    lide[jm].polozky.push({ ...obj, produkt: produkt, id: id });
+                    if (!lide[obj.zakaznik]) lide[obj.zakaznik] = { polozky: [] };
+                    lide[obj.zakaznik].polozky.push({ ...obj, produkt: produkt, id: id });
                 }
             }
             vykresli(lide);
@@ -82,46 +100,36 @@
 
         for (let jm in lide) {
             let htmlPolozky = "";
-            let suma = 0;
+            let celkovaSuma = 0;
 
             lide[jm].polozky.forEach(p => {
                 const cenaKg = cenyProduktu[p.produkt] || 0;
                 const vaha = p.skutecna_vaha_gr || 0;
-                const cena = Math.round((vaha / 1000) * cenaKg);
-                suma += cena;
+                const cenaCislo = Math.round((vaha / 1000) * cenaKg);
+                celkovaSuma += cenaCislo;
 
                 htmlPolozky += `
                     <div class="polozka">
-                        <div class="zbozi-info">
-                            <div class="zbozi-nazev">${p.produkt}</div>
-                            <div class="zbozi-obj">Objednáno: ${p.vaha_objednano} kg</div>
+                        <div class="zbozi-nazev">${p.produkt}</div>
+                        <div class="zbozi-obj">${p.vaha_objednano}kg</div>
+                        <div class="vstup-vaha">
+                            <input type="number" value="${vaha || ''}" onchange="ulozVahu('${p.produkt}','${p.id}', this.value)">
+                            <span>gr</span>
                         </div>
-                        <div>
-                            <label>Gramy</label>
-                            <input type="number" value="${vaha || ''}" 
-                                   onchange="ulozVahu('${p.produkt}','${p.id}', this.value)">
-                        </div>
-                        <div style="text-align:right">
-                            <label>Cena</label>
-                            <span style="font-weight:bold; color:#d32f2f;">${cena} Kč</span>
-                        </div>
+                        <div class="polozka-cena">${cenaCislo} Kč</div>
                     </div>`;
             });
 
             kontejner.innerHTML += `
                 <div class="karta-zakaznik">
-                    <span class="jmeno-hlavni">${jm}</span>
+                    <div class="hlavicka-karty"><span class="jmeno">${jm}</span></div>
                     ${htmlPolozky}
-                    <div class="soucty-box">
-                        <div>
-                            <label>Zaplaceno (Kč)</label>
-                            <input type="number" id="platba-${jm}" placeholder="Zadej částku" style="font-size:1.1rem; width:130px; border-color:var(--success);">
+                    <div class="paticka-karty">
+                        <div class="vstup-platba">
+                            <input type="number" id="platba-${jm}" placeholder="Zapl. Kč">
+                            <button class="btn-ok" onclick="potvrditVse('${jm}', ${celkovaSuma})">OK</button>
                         </div>
-                        <div style="text-align:right">
-                            <div class="cena-celkem-label">CELKEM K PLACENÍ</div>
-                            <div class="cena-celkem-hodnota">${suma} Kč</div>
-                            <button class="btn-vse-ok" style="margin-top:8px" onclick="potvrditVse('${jm}', ${suma})">POTVRDIT VŠE</button>
-                        </div>
+                        <div class="suma-vysledek">${celkovaSuma} Kč</div>
                     </div>
                 </div>`;
         }
@@ -131,32 +139,18 @@
         db.ref("objednavky/" + prod + "/" + id).update({ skutecna_vaha_gr: parseInt(v) || 0 });
     }
 
-    function potvrditVse(jm, sumaKPlaceni) {
+    function potvrditVse(jm, suma) {
         const zaplaceno = parseInt(document.getElementById("platba-" + jm).value) || 0;
         const dnes = new Date();
         const obdobi = (dnes.getMonth() + 1) + "_" + dnes.getFullYear();
 
-        // 1. Uložit do tržeb
         if (zaplaceno > 0) {
-            db.ref("finance/" + obdobi + "/trzby").push({
-                zakaznik: jm,
-                castka: zaplaceno,
-                datum: dnes.toLocaleDateString(),
-                zbozi: "Kompletní nákup"
-            });
+            db.ref("finance/" + obdobi + "/trzby").push({ zakaznik: jm, castka: zaplaceno, datum: dnes.toLocaleDateString(), zbozi: "Komplet" });
         }
-
-        // 2. Pokud nezaplatil vše, vytvořit dluh
-        if (zaplaceno < sumaKPlaceni) {
-            db.ref("dluhy").push({
-                jmeno: jm,
-                castka: sumaKPlaceni - zaplaceno,
-                datum: dnes.toLocaleDateString(),
-                zbozi: "Zbytek nákupu"
-            });
+        if (zaplaceno < suma) {
+            db.ref("dluhy").push({ jmeno: jm, castka: suma - zaplaceno, datum: dnes.toLocaleDateString(), zbozi: "Doplatek" });
         }
-
-        alert("Uloženo!");
+        alert("Hotovo!");
     }
 </script>
 </body>
