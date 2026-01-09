@@ -2,49 +2,56 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Bilance Hmotnosti & Mazání</title>
+    <title>Bilance kg & Úsporný vzhled</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { --primary: #1a237e; --bg: #f4f7f9; --klobasa: #2e7d32; --cabajka: #1565c0; --danger: #d32f2f; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 15px; margin: 0; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
         
-        .top-panel { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .top-panel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
         
-        .search-box { padding: 12px; border: 2px solid #ddd; border-radius: 8px; width: 100%; max-width: 300px; font-size: 1rem; outline: none; }
-        .search-box:focus { border-color: var(--primary); }
+        .search-box { padding: 10px; border: 2px solid #ddd; border-radius: 8px; width: 100%; max-width: 250px; outline: none; }
 
-        .bilance-box { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-wrap: wrap; gap: 10px; }
+        /* MOŽNOST Č. 2: Úsporná bilance */
+        .bilance-box { 
+            background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            display: flex; flex-wrap: wrap; gap: 8px; 
+        }
 
-        .bilance-item { padding: 10px 18px; border-radius: 25px; font-weight: bold; display: flex; align-items: center; gap: 10px; border: 2px solid #ddd; font-size: 1.1rem; }
+        .bilance-item { 
+            padding: 5px 12px; border-radius: 15px; font-weight: bold; 
+            display: flex; align-items: center; gap: 6px; border: 2px solid #ddd;
+            font-size: 0.9rem; /* Menší písmo pro úsporu místa */
+        }
         .barva-klobasa { background: #e8f5e9; color: var(--klobasa); border-color: var(--klobasa); }
         .barva-cabajka { background: #e3f2fd; color: var(--cabajka); border-color: var(--cabajka); }
         .barva-ostatni { background: #f5f5f5; color: #616161; border-color: #9e9e9e; }
         
-        .zakaznik-karta { background: white; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .zakaznik-hlavicka { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .vaha-cislo { font-size: 1rem; color: #000; }
+
+        .zakaznik-karta { background: white; border-radius: 12px; padding: 15px; margin-top: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .zakaznik-hlavicka { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 8px; }
         
-        .historie-tabulka { width: 100%; border-collapse: collapse; }
-        .historie-tabulka td { padding: 8px; border-bottom: 1px solid #eee; }
+        .historie-tabulka { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .historie-tabulka td { padding: 6px; border-bottom: 1px solid #eee; }
         
-        .btn-smazat-radek { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1.2rem; }
-        .btn-smazat-radek:hover { color: var(--danger); }
-        .btn-smazat-vse { background: #ffebee; color: var(--danger); border: 1px solid #ffcdd2; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-smazat-vse:hover { background: var(--danger); color: white; }
+        .btn-smazat-radek { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1.1rem; }
+        .btn-smazat-vse { background: #ffebee; color: var(--danger); border: 1px solid #ffcdd2; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin:0">⚖️ BILANCE & HISTORIE</h2>
-    <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary);">🏠 ADMIN</a>
+    <h2 style="margin:0; font-size: 1.2rem;">⚖️ CELKOVÁ BILANCE (kg)</h2>
+    <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary); font-size: 0.9rem;">🏠 ADMIN</a>
 </div>
 
 <div class="top-panel">
     <input type="text" id="hledat" class="search-box" placeholder="Hledat zákazníka..." onkeyup="filtruj()">
-    <div id="bilance-zbozi" class="bilance-box">Počítám kila...</div>
+    <div id="bilance-zbozi" class="bilance-box">Počítám váhu...</div>
 </div>
 
 <div id="seznam-historie"></div>
@@ -64,15 +71,17 @@
                 for (let id in data[mesic].trzby) {
                     const t = data[mesic].trzby[id];
                     if (t.zbozi) {
-                        const položky = t.zbozi.split(","); 
-                        položky.forEach(p => {
+                        const polozky = t.zbozi.split(","); 
+                        polozky.forEach(p => {
                             const text = p.trim();
                             if (text === "") return;
                             let nazev = text.split("(")[0].trim();
                             const match = text.match(/\(([^)]+)\)/);
-                            let vaha = 0;
-                            if (match) { vaha = parseFloat(match[1].replace(/[^\d.]/g, '')) || 0; }
-                            vahaSolo[nazev] = (vahaSolo[nazev] || 0) + vaha;
+                            if (match) {
+                                // Vytáhne číslo a vydělí 1000 (převod g na kg)
+                                let gramy = parseFloat(match[1].replace(/[^\d.]/g, '')) || 0;
+                                vahaSolo[nazev] = (vahaSolo[nazev] || 0) + (gramy / 1000);
+                            }
                         });
                     }
                     if (!zakaznici[t.zakaznik]) zakaznici[t.zakaznik] = [];
@@ -92,7 +101,9 @@
             const hledej = nazev.toLowerCase();
             if (hledej.includes("klobasa") || hledej.includes("klobása")) trida = "barva-klobasa";
             if (hledej.includes("čabajka") || hledej.includes("cabajka")) trida = "barva-cabajka";
-            box.innerHTML += `<div class="bilance-item ${trida}">${nazev}: <span>${bilance[nazev].toFixed(2)} kg</span></div>`;
+            
+            // Zobrazení s přesností na 2 desetinná místa
+            box.innerHTML += `<div class="bilance-item ${trida}">${nazev}: <span class="vaha-cislo">${bilance[nazev].toFixed(2)} kg</span></div>`;
         });
     }
 
@@ -113,7 +124,7 @@
             kontejner.innerHTML += `
                 <div class="zakaznik-karta" data-jmeno="${jmeno.toLowerCase()}">
                     <div class="zakaznik-hlavicka">
-                        <span style="font-weight:bold; color:var(--primary); font-size:1.2rem;">${jmeno}</span>
+                        <span style="font-weight:bold; color:var(--primary);">${jmeno}</span>
                         <button class="btn-smazat-vse" onclick="smazatVsechnuHistorii('${jmeno}')">Smazat vše</button>
                     </div>
                     <table class="historie-tabulka"><tbody>${radkyHtml}</tbody></table>
@@ -122,11 +133,11 @@
     }
 
     function smazatJeden(klicMesic, id) {
-        if (confirm("Smazat tento nákup?")) { db.ref(`finance/${klicMesic}/trzby/${id}`).remove(); }
+        if (confirm("Smazat?")) { db.ref(`finance/${klicMesic}/trzby/${id}`).remove(); }
     }
 
     function smazatVsechnuHistorii(jmeno) {
-        if (confirm(`Smazat celou historii pro: ${jmeno}?`)) {
+        if (confirm(`Smazat vše pro: ${jmeno}?`)) {
             db.ref("finance").once("value", snap => {
                 const data = snap.val() || {};
                 for (let mesic in data) {
