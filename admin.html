@@ -10,6 +10,7 @@
         :root { 
             --primary: #1a237e; --accent: #3949ab; --bg: #f4f7f9;
             --sklad: #546e7a; --vydej: #ff6f00; --dluh: #d32f2f; --finance: #2e7d32;
+            --historie: #03a9f4; /* Světle modrá pro historii */
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -28,14 +29,17 @@
             border-radius: 12px; text-align: center; font-weight: bold; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;
             display: flex; flex-direction: column; align-items: center; gap: 10px;
+            min-height: 100px;
+            justify-content: center;
         }
-        .menu-item i { font-size: 2rem; }
+        .menu-item span { font-size: 2rem; }
         .menu-item:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); opacity: 0.9; }
         
         .m-sklad { background: var(--sklad); }
         .m-vydej { background: var(--vydej); }
         .m-dluh { background: var(--dluh); }
         .m-finance { background: var(--finance); }
+        .m-historie { background: var(--historie); } /* Nový styl */
 
         /* SEKCE NABÍDKA */
         .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -67,15 +71,19 @@
         </a>
         <a href="vydej.html" class="menu-item m-vydej">
             <span>🚚</span> VÝDEJ ZÁKAZNÍKŮM
-            <small style="font-weight: normal; font-size: 0.7rem;">(Karty lidí + tlačítko POSLÁNO)</small>
+            <small style="font-weight: normal; font-size: 0.7rem;">(Karty lidí + vážení)</small>
         </a>
         <a href="nezaplaceno.html" class="menu-item m-dluh">
             <span>🔴</span> NEZAPLACENO
-            <small style="font-weight: normal; font-size: 0.7rem;">(Vydané zboží čekající na peníze)</small>
+            <small style="font-weight: normal; font-size: 0.7rem;">(Čeká na peníze)</small>
         </a>
         <a href="finance.html" class="menu-item m-finance">
             <span>💰</span> FINANCE
-            <small style="font-weight: normal; font-size: 0.7rem;">(Historie plateb)</small>
+            <small style="font-weight: normal; font-size: 0.7rem;">(Zisk a bilance)</small>
+        </a>
+        <a href="historie.html" class="menu-item m-historie">
+            <span>📜</span> HISTORIE NÁKUPŮ
+            <small style="font-weight: normal; font-size: 0.7rem;">(Karty zákazníků)</small>
         </a>
     </div>
 
@@ -87,8 +95,7 @@
             <button class="btn-add" onclick="pridat()">PŘIDAT</button>
         </div>
 
-        <div id="seznam" class="seznam-zbozi">
-            </div>
+        <div id="seznam" class="seznam-zbozi"></div>
     </div>
 </div>
 
@@ -131,4 +138,3 @@
 
 </body>
 </html>
-
