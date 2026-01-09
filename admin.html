@@ -10,36 +10,37 @@
         :root { 
             --primary: #1a237e; --accent: #3949ab; --bg: #f4f7f9;
             --sklad: #546e7a; --vydej: #ff6f00; --dluh: #d32f2f; --finance: #2e7d32;
-            --historie: #03a9f4; /* Světle modrá pro historii */
+            --historie: #03a9f4; 
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         
-        h1 { color: var(--primary); text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+        h1 { color: var(--primary); text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; }
 
-        /* HLAVNÍ ROZCESTNÍK */
+        /* HLAVNÍ ROZCESTNÍK - upravený grid pro 5 prvků */
         .menu-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-            gap: 15px; 
+            /* Sníženo na 180px, aby se jich vešlo víc do řady */
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            gap: 12px; 
             margin-bottom: 30px; 
         }
         .menu-item { 
-            text-decoration: none; color: white; padding: 25px 15px; 
+            text-decoration: none; color: white; padding: 20px 10px; 
             border-radius: 12px; text-align: center; font-weight: bold; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-            min-height: 100px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            min-height: 110px;
             justify-content: center;
         }
-        .menu-item span { font-size: 2rem; }
-        .menu-item:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); opacity: 0.9; }
+        .menu-item span { font-size: 1.8rem; }
+        .menu-item:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); opacity: 0.9; }
         
         .m-sklad { background: var(--sklad); }
         .m-vydej { background: var(--vydej); }
         .m-dluh { background: var(--dluh); }
         .m-finance { background: var(--finance); }
-        .m-historie { background: var(--historie); } /* Nový styl */
+        .m-historie { background: var(--historie); }
 
         /* SEKCE NABÍDKA */
         .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -56,7 +57,11 @@
         }
         .btn-delete { color: #d32f2f; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
 
-        @media (max-width: 600px) { .input-group { grid-template-columns: 1fr; } }
+        /* Mobilní zobrazení */
+        @media (max-width: 600px) { 
+            .input-group { grid-template-columns: 1fr; }
+            .menu-grid { grid-template-columns: 1fr 1fr; } /* Na mobilu 2 vedle sebe */
+        }
     </style>
 </head>
 <body>
@@ -66,31 +71,31 @@
 
     <div class="menu-grid">
         <a href="sklad.html" class="menu-item m-sklad">
-            <span>📦</span> CELKEM VYROBIT!
-            <small style="font-weight: normal; font-size: 0.7rem;">(Kolik kg celkem připravit)</small>
+            <span>📦</span> CELKEM VYROBIT
+            <small style="font-weight: normal; font-size: 0.65rem;">(Suma kg k přípravě)</small>
         </a>
         <a href="vydej.html" class="menu-item m-vydej">
-            <span>🚚</span> VÝDEJ ZÁKAZNÍKŮM
-            <small style="font-weight: normal; font-size: 0.7rem;">(Karty lidí + vážení)</small>
+            <span>🚚</span> VÝDEJ
+            <small style="font-weight: normal; font-size: 0.65rem;">(Vážení a expedice)</small>
         </a>
         <a href="nezaplaceno.html" class="menu-item m-dluh">
-            <span>🔴</span> NEZAPLACENO
-            <small style="font-weight: normal; font-size: 0.7rem;">(Čeká na peníze)</small>
+            <span>🔴</span> POKLADNA
+            <small style="font-weight: normal; font-size: 0.65rem;">(Čeká na zaplacení)</small>
         </a>
         <a href="finance.html" class="menu-item m-finance">
             <span>💰</span> FINANCE
-            <small style="font-weight: normal; font-size: 0.7rem;">(Zisk a bilance)</small>
+            <small style="font-weight: normal; font-size: 0.65rem;">(Zisky a náklady)</small>
         </a>
         <a href="historie.html" class="menu-item m-historie">
-            <span>📜</span> HISTORIE NÁKUPŮ
-            <small style="font-weight: normal; font-size: 0.7rem;">(Karty zákazníků)</small>
+            <span>📜</span> HISTORIE
+            <small style="font-weight: normal; font-size: 0.65rem;">(Karty zákazníků)</small>
         </a>
     </div>
 
     <div class="box">
         <h3>➕ EDITACE NABÍDKY</h3>
         <div class="input-group">
-            <input type="text" id="nazev" placeholder="Název produktu (např. Jablka)">
+            <input type="text" id="nazev" placeholder="Název produktu">
             <input type="number" id="cena" placeholder="Cena za kg">
             <button class="btn-add" onclick="pridat()">PŘIDAT</button>
         </div>
@@ -104,7 +109,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Načítání nabídky
     db.ref("produkty").on("value", (snap) => {
         const data = snap.val() || {};
         const div = document.getElementById("seznam");
