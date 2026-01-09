@@ -26,21 +26,25 @@
         .produkt-cena { color: #666; font-size: 0.9rem; }
         
         .ovladani { display: flex; align-items: center; gap: 10px; }
-        .vaha-input { width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; }
-        .btn-add { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .vaha-input { width: 70px; padding: 8px; border: 2px solid #1a237e; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1rem; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
         /* Košík */
         .kosik-vypis { margin-top: 10px; }
-        .kosik-polozka { display: flex; justify-content: space-between; font-size: 0.95rem; padding: 5px 0; color: #333; }
+        .kosik-polozka { display: flex; justify-content: space-between; font-size: 0.95rem; padding: 8px 0; border-bottom: 1px dashed #ddd; color: #333; }
         .celkem-box { margin-top: 15px; padding-top: 10px; border-top: 2px solid #eee; text-align: right; }
-        .celkem-cena { font-size: 1.3rem; font-weight: bold; color: #d32f2f; }
+        .celkem-cena { font-size: 1.5rem; font-weight: bold; color: #d32f2f; }
 
         .btn-odeslat { 
             width: 100%; background: var(--accent); color: white; border: none; padding: 15px; 
-            border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 15px;
+            border-radius: 12px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 15px;
             box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);
         }
         .btn-odeslat:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+        
+        /* Styl pro šipky inputu (aby byly lépe vidět na mobilu) */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { opacity: 1; height: 30px; }
     </style>
 </head>
 <body>
@@ -95,7 +99,8 @@
                         <div class="produkt-cena">${nabidka[zbozi]} Kč/kg</div>
                     </div>
                     <div class="ovladani">
-                        <input type="number" id="qty-${zbozi}" class="vaha-input" step="0.1" min="0" placeholder="kg">
+                        <input type="number" id="qty-${zbozi}" class="vaha-input" 
+                               step="0.5" min="0.5" value="1">
                         <button class="btn-add" onclick="pridatDoKosiku('${zbozi}')">PŘIDAT</button>
                     </div>
                 </div>`;
@@ -104,7 +109,9 @@
 
     // 2. Logika košíku
     function pridatDoKosiku(nazev) {
-        const vaha = parseFloat(document.getElementById("qty-" + nazev).value);
+        const inputPole = document.getElementById("qty-" + nazev);
+        const vaha = parseFloat(inputPole.value);
+        
         if (!vaha || vaha <= 0) return;
 
         const existujiciIndex = kosik.findIndex(i => i.nazev === nazev);
@@ -114,7 +121,8 @@
             kosik.push({ nazev: nazev, vaha: vaha, cenaKg: nabidka[nazev] });
         }
 
-        document.getElementById("qty-" + nazev).value = "";
+        // PO PŘIDÁNÍ: Vrátíme hodnotu na 1 (místo smazání pole)
+        inputPole.value = "1";
         vykresliKosik();
     }
 
@@ -137,8 +145,8 @@
             celkem += cenaPolozky;
             div.innerHTML += `
                 <div class="kosik-polozka">
-                    <span>${p.nazev} (${p.vaha} kg)</span>
-                    <span>${cenaPolozky} Kč <button onclick="smazat(${index})" style="border:none;background:none;color:red;cursor:pointer">✕</button></span>
+                    <span><b>${p.nazev}</b> (${p.vaha.toFixed(2)} kg)</span>
+                    <span>${cenaPolozky} Kč <button onclick="smazat(${index})" style="border:none;background:none;color:red;cursor:pointer;font-weight:bold;margin-left:10px">✕</button></span>
                 </div>`;
         });
 
@@ -161,7 +169,6 @@
         tlacitko.disabled = true;
         tlacitko.innerText = "Odesílám...";
 
-        // VYTVOŘENÍ UNIKÁTNÍHO ID PRO TUTO SKUPINU (jedna návštěva = jedno ID)
         const idSkupiny = "obj_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
 
         const zapisy = kosik.map(p => {
@@ -171,7 +178,7 @@
                 skutecna_vaha_gr: 0,
                 vydano: false,
                 datum: new Date().toLocaleDateString(),
-                id_skupiny: idSkupiny // Důležité pro oddělení objednávek stejného člověka
+                id_skupiny: idSkupiny 
             });
         });
 
