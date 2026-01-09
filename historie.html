@@ -2,14 +2,27 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Historie zákazníků</title>
+    <title>Historie zákazníků & Bilance</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #1a237e; --bg: #f4f7f9; --danger: #d32f2f; }
+        :root { --primary: #1a237e; --bg: #f4f7f9; --danger: #d32f2f; --success: #2e7d32; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        
         .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         
+        /* Nový styl pro horní ovládací panel */
+        .top-panel { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; }
+        
+        .search-box { padding: 12px; border: 2px solid #ddd; border-radius: 8px; width: 250px; font-size: 1rem; }
+
+        /* Styl pro bilanci zboží */
+        .bilance-box { 
+            background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex; gap: 15px; flex-wrap: wrap; flex-grow: 1; border-left: 5px solid var(--success);
+        }
+        .bilance-item { background: #e8f5e9; padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; color: var(--success); font-weight: bold; border: 1px solid #c8e6c9; }
+
         .zakaznik-karta { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .zakaznik-hlavicka { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
         .jmeno { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
@@ -20,21 +33,24 @@
         
         .btn-smazat-vse { background: #ffebee; color: var(--danger); border: 1px solid #ffcdd2; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-smazat-vse:hover { background: var(--danger); color: white; }
-        
         .btn-smazat-radek { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; }
         .btn-smazat-radek:hover { color: var(--danger); }
-
-        .search-box { padding: 10px; border: 2px solid #ddd; border-radius: 8px; width: 250px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin:0">📜 HISTORIE NÁKUPŮ</h2>
+    <h2 style="margin:0">📜 HISTORIE & CELKOVÁ BILANCE</h2>
     <a href="admin.html" style="text-decoration:none; font-weight:bold; color:var(--primary);">🏠 ADMIN</a>
 </div>
 
-<input type="text" id="hledat" class="search-box" placeholder="Hledat zákazníka..." onkeyup="filtruj()">
+<div class="top-panel">
+    <input type="text" id="hledat" class="search-box" placeholder="Hledat zákazníka..." onkeyup="filtruj()">
+    
+    <div id="bilance-zbozi" class="bilance-box">
+        <span style="color:#666">Počítám celkovou bilanci zboží...</span>
+    </div>
+</div>
 
 <div id="seznam-historie">Načítám historii...</div>
 
@@ -43,32 +59,53 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Načítáme data z finance -> trzby (tam končí vše zaplacené)
     db.ref("finance").on("value", snap => {
         const data = snap.val() || {};
         const zakaznici = {};
+        const bilanceZbozi = {}; // Zde budeme sčítat všechno zboží
 
-        // Projdeme všechny měsíce a roky
         for (let klicMesic in data) {
             if (data[klicMesic].trzby) {
                 const trzbyMesice = data[klicMesic].trzby;
                 for (let idTrzby in trzbyMesice) {
                     const t = trzbyMesice[idTrzby];
-                    if (!zakaznici[t.zakaznik]) {
-                        zakaznici[t.zakaznik] = [];
-                    }
-                    // Přidáme informaci o tom, kde je záznam uložen (pro mazání)
+                    
+                    // 1. Logika pro zákazníky
+                    if (!zakaznici[t.zakaznik]) { zakaznici[t.zakaznik] = []; }
                     zakaznici[t.zakaznik].push({ ...t, id: idTrzby, klicMesic: klicMesic });
+
+                    // 2. Logika pro bilanci zboží (sčítání podle názvu)
+                    // Předpokládáme, že n.zbozi obsahuje název (např. "Brambory 5kg")
+                    const nazevZbozi = t.zbozi || "Neznámé zboží";
+                    if (!bilanceZbozi[nazevZbozi]) {
+                        bilanceZbozi[nazevZbozi] = 0;
+                    }
+                    // Pokud máš v historii i množství jako číslo, mohl bys sčítat to, 
+                    // ale teď sčítáme počet výskytů (prodejů) daného druhu.
+                    bilanceZbozi[nazevZbozi] += 1; 
                 }
             }
         }
+        vykresliBilanci(bilanceZbozi);
         vykresli(zakaznici);
     });
+
+    // Funkce, která vykreslí bubliny s celkovým počtem prodaných věcí
+    function vykresliBilanci(bilance) {
+        const box = document.getElementById("bilance-zbozi");
+        box.innerHTML = '<strong style="width:100%; margin-bottom:5px; font-size:0.8rem; color:#666">CELKEM PRODÁNO (počet položek):</strong>';
+        
+        const druhy = Object.keys(bilance).sort();
+        if (druhy.length === 0) { box.innerHTML = "Zatím žádná data."; return; }
+
+        druhy.forEach(druh => {
+            box.innerHTML += `<div class="bilance-item">${druh}: ${bilance[druh]}x</div>`;
+        });
+    }
 
     function vykresli(zakaznici) {
         const kontejner = document.getElementById("seznam-historie");
         kontejner.innerHTML = "";
-
         const jmena = Object.keys(zakaznici).sort();
 
         if (jmena.length === 0) {
@@ -80,8 +117,10 @@
             let radkyHtml = "";
             let celkemUtraceno = 0;
 
-            // Seřadíme nákupy od nejnovějšího (podle datumu - zjednodušeně)
-            zakaznici[jmeno].reverse().forEach(n => {
+            // Kopie pole pro seřazení od nejnovějšího
+            const nakupy = [...zakaznici[jmeno]].reverse();
+
+            nakupy.forEach(n => {
                 celkemUtraceno += parseInt(n.castka);
                 radkyHtml += `
                     <tr>
@@ -113,16 +152,14 @@
         });
     }
 
-    // Funkce pro mazání jednoho konkrétního nákupu
     function smazatJeden(klicMesic, id) {
-        if (confirm("Opravdu smazat tento jeden nákup z historie? (Ovlivní to i finance v daném měsíci)")) {
+        if (confirm("Opravdu smazat tento nákup?")) {
             db.ref(`finance/${klicMesic}/trzby/${id}`).remove();
         }
     }
 
-    // Funkce pro mazání kompletního jména
     function smazatVsechnuHistorii(jmeno) {
-        if (confirm(`POZOR! Chcete smazat KOMPLETNÍ historii pro jméno: ${jmeno}? Tato akce smaže i všechny související příjmy z financí!`)) {
+        if (confirm(`Smazat komplet historii pro: ${jmeno}?`)) {
             db.ref("finance").once("value", snap => {
                 const data = snap.val() || {};
                 for (let klicMesic in data) {
@@ -139,7 +176,6 @@
         }
     }
 
-    // Vyhledávání v reálném čase
     function filtruj() {
         const text = document.getElementById("hledat").value.toLowerCase();
         const karty = document.querySelectorAll(".zakaznik-karta");
