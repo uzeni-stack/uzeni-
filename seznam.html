@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Rozesílatel - Cloudové zprávy</title>
+    <title>WhatsApp Rozesílatel - Kompletní</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -15,13 +15,14 @@
         .odeslano { background: #f9f9f9; opacity: 0.5; }
         
         .jmeno { font-weight: bold; flex: 1; font-size: 0.95rem; }
-        .tel-input { width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
+        .tel-input { width: 110px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
         
         .btn-wa { background: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .btn-save { background: #1a237e; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-save { background: #1a237e; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 5px; }
         .btn-hide { background: #eee; color: #666; border: none; padding: 10px; border-radius: 10px; cursor: pointer; }
         
         .reset-btn { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; float: right; margin-left: 5px; }
+        h2 { color: #1a237e; margin-top: 0; }
     </style>
 </head>
 <body>
@@ -30,38 +31,39 @@
     <button class="reset-btn" onclick="obnovitSkryte()">Obnovit skryté</button>
     <button class="reset-btn" onclick="resetVsech()" style="background:#555;">Reset fajfek</button>
     
-    <h2 style="color:#1a237e; margin-top:0;">📱 Cloudová Rozesílka</h2>
+    <h2>📱 WhatsApp Správce</h2>
     
     <div class="global-box">
-        <label><b>Text zprávy (uloženo v databázi):</b></label>
-        <textarea id="msg" placeholder="Načítám zprávu..."></textarea>
-        <button class="btn-save" onclick="ulozZpravuDoDB()">💾 ULOŽIT TENTO TEXT</button>
+        <label><b>Text zprávy (uloženo v cloudu):</b></label>
+        <textarea id="msg" placeholder="Načítám zprávu z databáze..."></textarea>
+        <button class="btn-save" onclick="ulozZpravuDoDB()">💾 ULOŽIT TEXT PRO VŠECHNY</button>
     </div>
 
-    <div id="list">Načítám zákazníky...</div>
+    <div id="list">Načítám seznam zákazníků...</div>
 </div>
 
 <script>
+    // TVÉ FIREBASE NASTAVENÍ
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 1. NAČTENÍ ZPRÁVY Z DATABÁZE
+    // 1. NAČTENÍ ZPRÁVY Z DATABÁZE (aby tam zůstala na tvrdo)
     db.ref("nastaveni/sablona_zpravy").on("value", snap => {
         if (snap.exists()) {
             document.getElementById("msg").value = snap.val();
         }
     });
 
-    // 2. ULOŽENÍ ZPRÁVY DO DATABÁZE
+    // 2. FUNKCE PRO ULOŽENÍ ZPRÁVY
     function ulozZpravuDoDB() {
         const text = document.getElementById("msg").value;
         db.ref("nastaveni/sablona_zpravy").set(text)
-            .then(() => alert("Zpráva uložena na server!"))
+            .then(() => alert("Zpráva byla uložena do databáze!"))
             .catch(err => alert("Chyba při ukládání: " + err));
     }
 
-    // 3. NAČTENÍ ZÁKAZNÍKŮ
+    // 3. NAČTENÍ ZÁKAZNÍKŮ Z OBJEDNÁVEK
     db.ref("objednavky").on("value", snap => {
         const data = snap.val() || {};
         const lide = new Set();
@@ -79,6 +81,8 @@
         
         seznam.forEach(jmeno => {
             const safeId = jmeno.replace(/\s+/g, '-');
+            
+            // Kontrola skrytí
             if (localStorage.getItem("hide-" + safeId) === "true") return;
 
             const telId = "tel-" + safeId;
@@ -92,25 +96,33 @@
                            ${jeHotovo ? 'checked' : ''} onchange="oznacHotovo('${safeId}', this.checked)">
                     <span class="jmeno">${jmeno}</span>
                     <input type="text" id="${telId}" class="tel-input" 
-                           placeholder="Telefon" value="${ulozeneCislo}" 
+                           placeholder="777123456" value="${ulozeneCislo}" 
                            oninput="localStorage.setItem('${telId}', this.value)">
                     <button class="btn-wa" onclick="poslat('${safeId}')">WA</button>
-                    <button class="btn-hide" onclick="skrytZakaznika('${safeId}')">✕</button>
+                    <button class="btn-hide" onclick="skrytZakaznika('${safeId}')" title="Skrýt zákazníka">✕</button>
                 </div>`;
         });
     }
 
+    // 4. OPRAVENÁ FUNKCE POSLAT (Čistí čísla a předvolby)
     function poslat(safeId) {
-        const tel = document.getElementById("tel-" + safeId).value.replace(/\s+/g, '');
+        let tel = document.getElementById("tel-" + safeId).value.replace(/\D/g, ''); // Vymaže vše kromě čísel
         const zprava = document.getElementById("msg").value;
-        if (!tel || !zprava) { alert("Chybí telefon nebo text!"); return; }
 
-        let cisteCislo = tel.length === 9 ? "420" + tel : tel.replace('+', '');
+        if (!tel) { alert("Zadejte telefonní číslo!"); return; }
+        if (!zprava) { alert("Napište text zprávy!"); return; }
+
+        // Pokud je číslo bez předvolby (9 číslic), přidáme 420
+        if (tel.length === 9) tel = "420" + tel;
+
+        // Označit jako odeslané
         localStorage.setItem("done-" + safeId, "true");
         
-        window.open(`https://wa.me/${cisteCislo.replace('+', '')}?text=${encodeURIComponent(zprava)}`, '_blank');
-        // Teď už location.reload() nevadí, protože zpráva se po načtení dotáhne z Firebase
-        location.reload();
+        // Vytvoření odkazu
+        const url = `https://wa.me/${tel}?text=${encodeURIComponent(zprava)}`;
+        
+        window.open(url, '_blank');
+        location.reload(); // Obnovit pro zobrazení fajfky
     }
 
     function oznacHotovo(safeId, stav) {
@@ -119,22 +131,24 @@
     }
 
     function skrytZakaznika(safeId) {
-        if (confirm("Skrýt?")) {
+        if (confirm("Opravdu skrýt zákazníka ze seznamu?")) {
             localStorage.setItem("hide-" + safeId, "true");
             location.reload();
         }
     }
 
     function resetVsech() {
-        if (confirm("Resetovat fajfky?")) {
+        if (confirm("Resetovat fajfky 'Posláno'?")) {
             for (let key in localStorage) { if (key.startsWith("done-")) localStorage.removeItem(key); }
             location.reload();
         }
     }
 
     function obnovitSkryte() {
-        for (let key in localStorage) { if (key.startsWith("hide-")) localStorage.removeItem(key); }
-        location.reload();
+        if (confirm("Zobrazit znovu všechny skryté lidi?")) {
+            for (let key in localStorage) { if (key.startsWith("hide-")) localStorage.removeItem(key); }
+            location.reload();
+        }
     }
 </script>
 </body>
