@@ -2,71 +2,43 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Správce - v1.5</title>
+    <title>WhatsApp Správce - v1.6</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        
-        .main-layout { 
-            display: grid; 
-            grid-template-columns: 1fr 220px; 
-            gap: 20px; 
-            width: 100%; 
-            max-width: 950px; 
-        }
-
+        .main-layout { display: grid; grid-template-columns: 1fr 220px; gap: 20px; width: 100%; max-width: 950px; }
         .left-column { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .right-panel { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 15px; height: fit-content; }
-
-        /* OBROVSKÉ TLAČÍTKO ZPĚT */
+        
         .btn-back-giant { 
             text-decoration: none; background: #d32f2f; color: white; 
             padding: 30px 10px; border-radius: 15px; font-weight: bold; 
-            font-size: 1.4rem; text-align: center;
-            box-shadow: 0 6px 15px rgba(211, 47, 47, 0.4);
-            transition: 0.3s;
+            font-size: 1.4rem; text-align: center; box-shadow: 0 6px 15px rgba(211, 47, 47, 0.4); transition: 0.3s;
         }
         .btn-back-giant:hover { background: #b71c1c; transform: translateY(-3px); }
 
         .control-box { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; }
-        .control-box h4 { margin-top: 0; color: #555; font-size: 0.8rem; text-transform: uppercase; }
-
         .global-box { background: #e7f3ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #bbdefb; }
         textarea { width: 100%; height: 100px; border: 1px solid #ccc; border-radius: 8px; padding: 10px; resize: none; font-size: 1rem; margin-bottom: 10px; }
         
         .zakaznik-radek { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; gap: 8px; }
-        .odeslano { background: #f9f9f9; opacity: 0.5; }
-        
+        .odeslano { background: #f4f4f4; opacity: 0.6; }
         .jmeno { font-weight: bold; flex: 1; font-size: 0.9rem; }
-        .tel-input { width: 90px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 0.85rem; }
-        
+        .tel-input { width: 90px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
         .btn-wa { background: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; min-width: 70px; }
-        .btn-saved { background: #9e9e9e !important; cursor: default; }
-        
+        .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
+        .btn-saved { background: #9e9e9e !important; }
         .btn-save-main { background: #3949ab; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        .btn-hide { background: #eee; color: #666; border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
-        
-        .side-btn { background: #555; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-bottom: 8px; font-weight: bold; }
-        .side-btn-red { background: #f44336; }
-
-        h2 { color: #1a237e; margin-top: 0; }
+        .side-btn { background: #555; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 8px; font-weight: bold; }
         .verze { font-size: 0.7rem; color: #bbb; float: right; }
-
-        @media (max-width: 800px) {
-            .main-layout { grid-template-columns: 1fr; }
-            .right-panel { position: static; }
-        }
     </style>
 </head>
 <body>
 
-<iframe name="skryty_ramec" style="display:none;"></iframe>
-
 <div class="main-layout">
     <div class="left-column">
-        <span class="verze">v1.5</span>
+        <span class="verze">v1.6</span>
         <h2>📱 WhatsApp Cloud Sync</h2>
         
         <div class="global-box">
@@ -74,23 +46,19 @@
             <textarea id="msg"></textarea>
             <button class="btn-save-main" onclick="ulozZpravuDoDB()">💾 ULOŽIT TEXT ZPRÁVY</button>
         </div>
-
-        <div id="list">Načítám...</div>
+        <div id="list">Načítám zákazníky...</div>
     </div>
 
     <div class="right-panel">
         <a href="admin.html" class="btn-back-giant">⬅ ZPĚT<br><small style="font-size: 0.8rem; font-weight: normal;">NA ROZCESTNÍK</small></a>
-        
         <div class="control-box">
-            <h4>Správa seznamu</h4>
             <button class="side-btn" onclick="obnovitSkryte()">👁 OBNOVIT SKRYTÉ</button>
-            <button class="side-btn side-btn-red" onclick="resetVsech()">♻ RESET FAJFEK</button>
+            <button class="side-btn" style="background:#f44336" onclick="resetVsech()">♻ RESET FAJFEK</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ... (zbytek JavaScriptu zůstává stejný jako v v1.4)
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -126,18 +94,9 @@
         const cislo = document.getElementById("tel-" + safeId).value;
         const firebaseKey = jmeno.replace(/[.#$\[\]]/g, "_");
         db.ref("kontakty/" + firebaseKey).set(cislo).then(() => {
-            const tlacitko = document.getElementById("btn-save-" + safeId);
-            tlacitko.innerText = "ULOŽENO";
-            tlacitko.classList.add("btn-saved");
+            const btn = document.getElementById("btn-save-" + safeId);
+            btn.innerText = "ULOŽENO"; btn.classList.add("btn-saved");
         });
-    }
-
-    function zmenaCisla(safeId) {
-        const tlacitko = document.getElementById("btn-save-" + safeId);
-        if (tlacitko && tlacitko.classList.contains("btn-saved")) {
-            tlacitko.innerText = "ULOŽIT";
-            tlacitko.classList.remove("btn-saved");
-        }
     }
 
     function vykresli(seznam) {
@@ -149,30 +108,35 @@
             if (localStorage.getItem("hide-" + safeId) === "true") return;
             const ulozeneCislo = vsechnyKontakty[firebaseKey] || "";
             const jeHotovo = localStorage.getItem("done-" + safeId) === "true";
-            const btnClass = ulozeneCislo ? "btn-save-tel btn-saved" : "btn-save-tel";
-            const btnText = ulozeneCislo ? "ULOŽENO" : "ULOŽIT";
             
             kontejner.innerHTML += `
                 <div class="zakaznik-radek ${jeHotovo ? 'odeslano' : ''}" id="row-${safeId}">
                     <input type="checkbox" ${jeHotovo ? 'checked' : ''} onchange="oznacHotovo('${safeId}', this.checked)">
                     <span class="jmeno">${jmeno}</span>
-                    <input type="text" id="tel-${safeId}" class="tel-input" value="${ulozeneCislo}" oninput="zmenaCisla('${safeId}')">
-                    <button id="btn-save-${safeId}" class="${btnClass}" onclick="potvrditUlozeniTel('${jmeno}', '${safeId}')">${btnText}</button>
+                    <input type="text" id="tel-${safeId}" class="tel-input" value="${ulozeneCislo}">
+                    <button id="btn-save-${safeId}" class="btn-save-tel ${ulozeneCislo ? 'btn-saved' : ''}" onclick="potvrditUlozeniTel('${jmeno}', '${safeId}')">${ulozeneCislo ? 'ULOŽENO' : 'ULOŽIT'}</button>
                     <button class="btn-wa" onclick="poslat('${safeId}')">WA</button>
-                    <button class="btn-hide" onclick="skrytZakaznika('${safeId}')">✕</button>
+                    <button style="background:#eee;border:none;padding:8px;border-radius:8px;cursor:pointer" onclick="skrytZakaznika('${safeId}')">✕</button>
                 </div>`;
         });
     }
 
+    // OPRAVENÁ FUNKCE POSÍLÁNÍ
     function poslat(safeId) {
         let tel = document.getElementById("tel-" + safeId).value.replace(/\D/g, '');
         const zprava = document.getElementById("msg").value;
         if (!tel) { alert("Chybí telefon!"); return; }
         if (tel.length === 9) tel = "420" + tel;
+
+        // 1. Nejdřív vizuálně označíme jako hotovo
         localStorage.setItem("done-" + safeId, "true");
-        document.getElementById("row-" + safeId).classList.add("odeslano");
+        const radek = document.getElementById("row-" + safeId);
+        radek.classList.add("odeslano");
+        radek.querySelector('input[type="checkbox"]').checked = true;
+
+        // 2. Otevřeme WhatsApp v novém okně (nejstabilnější metoda)
         const url = `https://wa.me/${tel}?text=${encodeURIComponent(zprava)}`;
-        window.open(url, 'skryty_ramec');
+        window.open(url, '_blank');
     }
 
     function oznacHotovo(safeId, stav) {
