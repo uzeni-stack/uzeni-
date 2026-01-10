@@ -2,24 +2,21 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Správce - v1.4</title>
+    <title>WhatsApp Správce - v1.5</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
         
-        /* Hlavní rozložení - dva sloupce */
         .main-layout { 
             display: grid; 
-            grid-template-columns: 1fr 220px; /* Seznam vlevo, panel vpravo */
+            grid-template-columns: 1fr 220px; 
             gap: 20px; 
             width: 100%; 
             max-width: 950px; 
         }
 
         .left-column { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        
-        /* Pravý panel, který drží pozici i při skrolování */
         .right-panel { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 15px; height: fit-content; }
 
         /* OBROVSKÉ TLAČÍTKO ZPĚT */
@@ -69,38 +66,34 @@
 
 <div class="main-layout">
     <div class="left-column">
-        <span class="verze">v1.4</span>
+        <span class="verze">v1.5</span>
         <h2>📱 WhatsApp Cloud Sync</h2>
         
         <div class="global-box">
-            <label><b>Společná zpráva pro všechny:</b></label>
+            <label><b>Společná zpráva:</b></label>
             <textarea id="msg"></textarea>
             <button class="btn-save-main" onclick="ulozZpravuDoDB()">💾 ULOŽIT TEXT ZPRÁVY</button>
         </div>
 
-        <div id="list">Načítám zákazníky...</div>
+        <div id="list">Načítám...</div>
     </div>
 
     <div class="right-panel">
-        <a href="index.html" class="btn-back-giant">⬅ ZPĚT<br><small style="font-size: 0.8rem; font-weight: normal;">NA ADMINA</small></a>
+        <a href="admin.html" class="btn-back-giant">⬅ ZPĚT<br><small style="font-size: 0.8rem; font-weight: normal;">NA ROZCESTNÍK</small></a>
         
         <div class="control-box">
             <h4>Správa seznamu</h4>
             <button class="side-btn" onclick="obnovitSkryte()">👁 OBNOVIT SKRYTÉ</button>
             <button class="side-btn side-btn-red" onclick="resetVsech()">♻ RESET FAJFEK</button>
         </div>
-        
-        <div style="font-size: 0.75rem; color: #888; text-align: center; padding: 10px;">
-            Poznámka: Změny se ukládají v reálném čase do cloudu.
-        </div>
     </div>
 </div>
 
 <script>
+    // ... (zbytek JavaScriptu zůstává stejný jako v v1.4)
     const firebaseConfig = { databaseURL: "https://eshop-fh-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     let vsechnyKontakty = {};
 
     db.ref("nastaveni/sablona_zpravy").on("value", snap => {
@@ -126,7 +119,7 @@
     }
 
     function ulozZpravuDoDB() {
-        db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value).then(() => alert("Zpráva uložena!"));
+        db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value).then(() => alert("Uloženo!"));
     }
 
     function potvrditUlozeniTel(jmeno, safeId) {
@@ -176,10 +169,8 @@
         const zprava = document.getElementById("msg").value;
         if (!tel) { alert("Chybí telefon!"); return; }
         if (tel.length === 9) tel = "420" + tel;
-
         localStorage.setItem("done-" + safeId, "true");
         document.getElementById("row-" + safeId).classList.add("odeslano");
-        
         const url = `https://wa.me/${tel}?text=${encodeURIComponent(zprava)}`;
         window.open(url, 'skryty_ramec');
     }
@@ -197,7 +188,7 @@
     }
 
     function resetVsech() {
-        if (confirm("Resetovat všechny odeslané?")) {
+        if (confirm("Resetovat fajfky?")) {
             for (let key in localStorage) { if (key.startsWith("done-")) localStorage.removeItem(key); }
             location.reload();
         }
