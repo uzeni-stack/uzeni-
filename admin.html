@@ -11,17 +11,17 @@
             --primary: #1a237e; --accent: #3949ab; --bg: #f4f7f9;
             --sklad: #546e7a; --vydej: #ff6f00; --dluh: #d32f2f; --finance: #2e7d32;
             --historie: #03a9f4; 
+            --whatsapp: #25D366; /* Nová barva pro WhatsApp */
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; }
         
         h1 { color: var(--primary); text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; }
 
-        /* HLAVNÍ ROZCESTNÍK - upravený grid pro 5 prvků */
+        /* HLAVNÍ ROZCESTNÍK - upravený grid pro 6 prvků */
         .menu-grid { 
             display: grid; 
-            /* Sníženo na 180px, aby se jich vešlo víc do řady */
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
             gap: 12px; 
             margin-bottom: 30px; 
         }
@@ -41,6 +41,7 @@
         .m-dluh { background: var(--dluh); }
         .m-finance { background: var(--finance); }
         .m-historie { background: var(--historie); }
+        .m-whatsapp { background: var(--whatsapp); } /* Styl pro novou kartu */
 
         /* SEKCE NABÍDKA */
         .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -60,7 +61,7 @@
         /* Mobilní zobrazení */
         @media (max-width: 600px) { 
             .input-group { grid-template-columns: 1fr; }
-            .menu-grid { grid-template-columns: 1fr 1fr; } /* Na mobilu 2 vedle sebe */
+            .menu-grid { grid-template-columns: 1fr 1fr; } 
         }
     </style>
 </head>
@@ -89,6 +90,10 @@
         <a href="historie.html" class="menu-item m-historie">
             <span>📜</span> HISTORIE
             <small style="font-weight: normal; font-size: 0.65rem;">(Karty zákazníků)</small>
+        </a>
+        <a href="seznam.html" class="menu-item m-whatsapp">
+            <span>📱</span> ROZESÍLKA
+            <small style="font-weight: normal; font-size: 0.65rem;">(WhatsApp zprávy)</small>
         </a>
     </div>
 
