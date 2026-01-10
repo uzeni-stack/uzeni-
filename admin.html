@@ -11,17 +11,18 @@
             --primary: #1a237e; --accent: #3949ab; --bg: #f4f7f9;
             --sklad: #546e7a; --vydej: #ff6f00; --dluh: #d32f2f; --finance: #2e7d32;
             --historie: #03a9f4; 
-            --whatsapp: #25D366; /* Nová barva pro WhatsApp */
+            --whatsapp: #25D366;
+            --index: #37474f; /* Barva pro tlačítko Indexu */
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; }
         
         h1 { color: var(--primary); text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; }
 
-        /* HLAVNÍ ROZCESTNÍK - upravený grid pro 6 prvků */
+        /* HLAVNÍ ROZCESTNÍK - upravený grid pro 7 prvků */
         .menu-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
             gap: 12px; 
             margin-bottom: 30px; 
         }
@@ -36,12 +37,14 @@
         .menu-item span { font-size: 1.8rem; }
         .menu-item:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); opacity: 0.9; }
         
+        /* Barvy tlačítek */
+        .m-index { background: var(--index); }
         .m-sklad { background: var(--sklad); }
         .m-vydej { background: var(--vydej); }
         .m-dluh { background: var(--dluh); }
         .m-finance { background: var(--finance); }
         .m-historie { background: var(--historie); }
-        .m-whatsapp { background: var(--whatsapp); } /* Styl pro novou kartu */
+        .m-whatsapp { background: var(--whatsapp); }
 
         /* SEKCE NABÍDKA */
         .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -71,6 +74,11 @@
     <h1>Správa prodeje</h1>
 
     <div class="menu-grid">
+        <a href="index.html" class="menu-item m-index">
+            <span>🏠</span> OBJEDNÁVKY
+            <small style="font-weight: normal; font-size: 0.65rem;">(Zákaznický index)</small>
+        </a>
+
         <a href="sklad.html" class="menu-item m-sklad">
             <span>📦</span> CELKEM VYROBIT
             <small style="font-weight: normal; font-size: 0.65rem;">(Suma kg k přípravě)</small>
