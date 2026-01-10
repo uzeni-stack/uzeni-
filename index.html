@@ -27,9 +27,8 @@
         .btn-pridat { 
             background: var(--primary); color: white; border: none; padding: 12px; 
             border-radius: 10px; font-weight: bold; cursor: pointer; flex-grow: 1; font-size: 1rem;
-            transition: all 0.2s;
+            transition: background 0.3s;
         }
-        /* Styl pro potvrzení přidání */
         .btn-success { background: var(--accent) !important; }
 
         .kosik-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ccc; }
@@ -75,6 +74,7 @@
         div.innerHTML = "";
 
         Object.keys(nabidka).sort().forEach(zbozi => {
+            const btnId = "btn-add-" + zbozi.replace(/\s+/g, '');
             div.innerHTML += `
                 <div class="produkt-radek">
                     <div style="font-weight:bold; font-size:1.1rem;">${zbozi}</div>
@@ -85,7 +85,7 @@
                             <input type="text" id="vaha-${zbozi}" class="vaha-displej" value="1.0" readonly>
                             <button class="btn-krok" onclick="upravitVahu('${zbozi}', 0.5)">+</button>
                         </div>
-                        <button class="btn-pridat" id="btn-add-${zbozi.replace(/\s+/g, '')}" onclick="vlozitDoKosiku('${zbozi}', this)">PŘIDAT</button>
+                        <button class="btn-pridat" id="${btnId}" onclick="vlozitDoKosiku('${zbozi}', this)">PŘIDAT</button>
                     </div>
                 </div>`;
         });
@@ -98,26 +98,20 @@
         pole.value = hodnota.toFixed(1);
     }
 
-    // PŘIDÁNÍ DO KOŠÍKU S VIZUÁLNÍ ODEZVOU
     function vlozitDoKosiku(nazev, tlacitko) {
         const pole = document.getElementById("vaha-" + nazev);
         const vaha = parseFloat(pole.value);
         const index = kosik.findIndex(i => i.nazev === nazev);
         
-        if (index > -1) { kosik[index].vaha += vaha; } 
-        else { kosik.push({ nazev: nazev, vaha: vaha, cenaKg: nabidka[nazev] }); }
+        if (index > -1) { 
+            kosik[index].vaha += vaha; 
+        } else { 
+            kosik.push({ nazev: nazev, vaha: vaha, cenaKg: nabidka[nazev] }); 
+        }
         
-        // EFEKT TLAČÍTKA
-        const puvodniText = tlacitko.innerText;
+        // TRVALÝ EFEKT TLAČÍTKA
         tlacitko.innerText = "PŘIDÁNO ✅";
         tlacitko.classList.add("btn-success");
-        tlacitko.disabled = true;
-
-        setTimeout(() => {
-            tlacitko.innerText = puvodniText;
-            tlacitko.classList.remove("btn-success");
-            tlacitko.disabled = false;
-        }, 800);
 
         pole.value = "1.0"; 
         prekresliKosik();
@@ -144,7 +138,22 @@
         document.getElementById("suma-cena").innerText = celkem;
     }
 
-    function odstranit(idx) { kosik.splice(idx, 1); prekresliKosik(); }
+    function odstranit(idx) { 
+        const smazanaPolozka = kosik[idx].nazev;
+        kosik.splice(idx, 1); 
+        prekresliKosik(); 
+
+        // Vrácení tlačítka do původního stavu
+        const staleVKosiku = kosik.some(i => i.nazev === smazanaPolozka);
+        if (!staleVKosiku) {
+            const btnId = "btn-add-" + smazanaPolozka.replace(/\s+/g, '');
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.innerText = "PŘIDAT";
+                btn.classList.remove("btn-success");
+            }
+        }
+    }
 
     function odeslatObjednavku() {
         const jmeno = document.getElementById("zakaznik-jmeno").value.trim();
@@ -152,12 +161,11 @@
         
         if (!jmeno) { 
             alert("Prosím, vyplňte své jméno!"); 
-            document.getElementById("zakaznik-jmeno").focus();
             return; 
         }
         
         tlacitko.disabled = true;
-        tlacitko.innerText = "Posílám objednávku...";
+        tlacitko.innerText = "Posílám...";
         
         const idSkupiny = "obj_" + Date.now();
         const zapisy = kosik.map(p => {
@@ -172,16 +180,8 @@
         });
 
         Promise.all(zapisy).then(() => {
-            alert("Děkujeme! Vaše objednávka byla úspěšně odeslána.");
-            kosik = []; 
-            document.getElementById("zakaznik-jmeno").value = ""; 
-            prekresliKosik();
-            tlacitko.disabled = false; 
-            tlacitko.innerText = "ODESLAT OBJEDNÁVKU";
-        }).catch(err => {
-            alert("Chyba při odesílání, zkuste to prosím znovu.");
-            tlacitko.disabled = false;
-            tlacitko.innerText = "ODESLAT OBJEDNÁVKU";
+            alert("Objednávka odeslána!");
+            location.reload(); // Pro úplný reset po úspěchu
         });
     }
 </script>
