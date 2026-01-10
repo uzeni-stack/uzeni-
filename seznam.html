@@ -2,36 +2,42 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Rozesílatel</title>
+    <title>WhatsApp Rozesílatel - Správa seznamu</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
-        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 550px; }
-        h2 { color: #1a237e; margin-top: 0; display: flex; align-items: center; gap: 10px; }
-        
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 15px; display: flex; justify-content: center; }
+        .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
         .global-box { background: #e7f3ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #bbdefb; }
         textarea { width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-sizing: border-box; resize: none; font-size: 1rem; }
         
-        .zakaznik-radek { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; gap: 10px; }
-        .jmeno { font-weight: bold; flex: 1; min-width: 100px; }
-        .tel-input { width: 130px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
+        .zakaznik-radek { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; gap: 8px; }
+        .odeslano { background: #f9f9f9; opacity: 0.5; }
         
-        .btn-wa { background: #25D366; color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; font-weight: bold; transition: 0.2s; }
-        .btn-wa:hover { background: #128C7E; transform: scale(1.05); }
+        .jmeno { font-weight: bold; flex: 1; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tel-input { width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
+        
+        .btn-wa { background: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .btn-hide { background: #eee; color: #666; border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-size: 0.8rem; }
+        .btn-hide:hover { background: #ddd; color: #333; }
+        
+        .reset-btn { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; float: right; margin-left: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🟢 WhatsApp Seznam</h2>
+    <button class="reset-btn" onclick="obnovitSkryte()">Obnovit skryté</button>
+    <button class="reset-btn" onclick="resetVsech()" style="background:#555;">Reset fajfek</button>
+    
+    <h2 style="color:#1a237e; margin-top:0;">📱 Správa rozesílky</h2>
     
     <div class="global-box">
-        <label><b>Společná zpráva:</b></label>
-        <textarea id="msg" placeholder="Ahoj, zboží je připraveno k odběru!"></textarea>
+        <label><b>Text zprávy:</b></label>
+        <textarea id="msg" placeholder="Ahoj, klobásy jsou připraveny k odběru!"></textarea>
     </div>
 
-    <div id="list">Načítám jména z objednávek...</div>
+    <div id="list">Načítám zákazníky...</div>
 </div>
 
 <script>
@@ -39,16 +45,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Načtení jmen z větvě objednávky
     db.ref("objednavky").on("value", snap => {
         const data = snap.val() || {};
-        const lide = new Set(); // Set zajistí, že jméno bude jen jednou
-
+        const lide = new Set();
         for (let produkt in data) {
             for (let id in data[produkt]) {
-                if (data[produkt][id].zakaznik) {
-                    lide.add(data[produkt][id].zakaznik);
-                }
+                if (data[produkt][id].zakaznik) lide.add(data[produkt][id].zakaznik);
             }
         }
         vykresli(Array.from(lide).sort());
@@ -59,32 +61,68 @@
         kontejner.innerHTML = "";
         
         seznam.forEach(jmeno => {
-            // Vytvoříme bezpečné ID pro input (bez mezer)
-            const idInputu = "tel-" + jmeno.replace(/\s+/g, '-');
+            const safeId = jmeno.replace(/\s+/g, '-');
+            
+            // Kontrola, jestli není jméno skryté
+            if (localStorage.getItem("hide-" + safeId) === "true") return;
+
+            const telId = "tel-" + safeId;
+            const doneId = "done-" + safeId;
+            const ulozeneCislo = localStorage.getItem(telId) || "";
+            const jeHotovo = localStorage.getItem(doneId) === "true";
             
             kontejner.innerHTML += `
-                <div class="zakaznik-radek">
-                    <span class="jmeno">${jmeno}</span>
-                    <input type="text" id="${idInputu}" class="tel-input" placeholder="777123456">
-                    <button class="btn-wa" onclick="poslat('${idInputu}')">ODESLAT</button>
+                <div class="zakaznik-radek ${jeHotovo ? 'odeslano' : ''}" id="row-${safeId}">
+                    <input type="checkbox" style="width:18px;height:18px;" 
+                           ${jeHotovo ? 'checked' : ''} onchange="oznacHotovo('${safeId}', this.checked)">
+                    <span class="jmeno" title="${jmeno}">${jmeno}</span>
+                    <input type="text" id="${telId}" class="tel-input" 
+                           placeholder="Telefon" value="${ulozeneCislo}" 
+                           oninput="localStorage.setItem('${telId}', this.value)">
+                    <button class="btn-wa" onclick="poslat('${safeId}')">WA</button>
+                    <button class="btn-hide" onclick="skrytZakaznika('${safeId}')" title="Odstranit ze seznamu">✕</button>
                 </div>`;
         });
     }
 
-    function poslat(idInputu) {
-        const tel = document.getElementById(idInputu).value.replace(/\s+/g, '');
+    function skrytZakaznika(safeId) {
+        if (confirm("Opravdu skrýt tohoto zákazníka ze seznamu?")) {
+            localStorage.setItem("hide-" + safeId, "true");
+            location.reload(); // Refresh pro překreslení
+        }
+    }
+
+    function obnovitSkryte() {
+        if (confirm("Chcete znovu zobrazit všechny dříve skryté zákazníky?")) {
+            for (let key in localStorage) {
+                if (key.startsWith("hide-")) localStorage.removeItem(key);
+            }
+            location.reload();
+        }
+    }
+
+    function oznacHotovo(safeId, stav) {
+        localStorage.setItem("done-" + safeId, stav);
+        document.getElementById("row-" + safeId).classList.toggle("odeslano", stav);
+    }
+
+    function poslat(safeId) {
+        const tel = document.getElementById("tel-" + safeId).value.replace(/\s+/g, '');
         const zprava = document.getElementById("msg").value;
+        if (!tel || !zprava) { alert("Doplň telefon a text!"); return; }
 
-        if (!tel) { alert("Doplň telefonní číslo!"); return; }
-        if (!zprava) { alert("Napiš text zprávy!"); return; }
+        let cisteCislo = tel.length === 9 ? "420" + tel : tel.replace('+', '');
+        localStorage.setItem("done-" + safeId, "true"); // Automatická fajfka
+        
+        window.open(`https://wa.me/${cisteCislo}?text=${encodeURIComponent(zprava)}`, '_blank');
+        location.reload();
+    }
 
-        // Přidání české předvolby, pokud chybí
-        let cisteCislo = tel;
-        if (cisteCislo.length === 9) cisteCislo = "420" + cisteCislo;
-        if (cisteCislo.startsWith("+")) cisteCislo = cisteCislo.substring(1);
-
-        const url = `https://wa.me/${cisteCislo}?text=${encodeURIComponent(zprava)}`;
-        window.open(url, '_blank');
+    function resetVsech() {
+        if (confirm("Resetovat všechny fajfky odeslání?")) {
+            for (let key in localStorage) { if (key.startsWith("done-")) localStorage.removeItem(key); }
+            location.reload();
+        }
     }
 </script>
 </body>
