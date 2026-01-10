@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Finance - Kompletní Správa</title>
+    <title>Finance - Správa Nákladů</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -18,21 +18,21 @@
         .castka { font-size: 1.8rem; font-weight: 900; display: block; }
 
         .sekce { background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; }
+        h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
         
-        .form-naklad { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        .btn-add { background: var(--loss); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .form-naklad { display: flex; gap: 10px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        .btn-add { background: var(--loss); color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; background: #f8f9fa; padding: 12px; font-size: 0.8rem; color: #666; }
+        th { text-align: left; background: #f8f9fa; padding: 12px; font-size: 0.8rem; color: #666; text-transform: uppercase; }
         td { padding: 12px; border-bottom: 1px solid #eee; }
         
         .btn-del { background: none; border: none; color: var(--loss); cursor: pointer; font-weight: bold; font-size: 0.8rem; }
-        .btn-del:hover { text-decoration: underline; }
         
-        .seznam-polozek { max-height: 250px; overflow-y: auto; font-size: 0.9rem; }
-        .polozka-radek { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fafafa; }
+        .seznam-polozek { max-height: 400px; overflow-y: auto; }
+        .polozka-radek { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f0f0f0; align-items: center; }
+        .polozka-radek:hover { background: #fffde7; }
     </style>
 </head>
 <body>
@@ -40,8 +40,8 @@
 <div class="header">
     <h2 style="margin:0">📊 Finanční bilance</h2>
     <div>
-        <select id="select-rok" onchange="nactiData()"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
-        <a href="admin.html" style="text-decoration:none; margin-left:15px; font-weight:bold;">🏠 ADMIN</a>
+        <select id="select-rok" onchange="nactiData()" style="padding:8px; border-radius:5px;"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
+        <a href="admin.html" style="text-decoration:none; margin-left:15px; font-weight:bold; color:var(--primary)">🏠 ADMIN</a>
     </div>
 </div>
 
@@ -51,28 +51,21 @@
     <div class="box box-zisk"><span id="sum-zisk" class="castka">0 Kč</span><span>Čistý Zisk</span></div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-    <div class="sekce">
-        <h3>💸 Náklady (Výdaje)</h3>
-        <div class="form-naklad">
-            <input type="text" id="naklad-nazev" placeholder="Popis" style="flex:2">
-            <input type="number" id="naklad-cena" placeholder="Kč" style="flex:1">
-            <button class="btn-add" onclick="pridatNaklad()">ULOŽIT</button>
-        </div>
-        <div id="seznam-nakladu" class="seznam-polozek">Načítám výdaje...</div>
+<div class="sekce">
+    <h3>💸 Evidence provozních nákladů</h3>
+    <div class="form-naklad">
+        <input type="text" id="naklad-nazev" placeholder="Popis výdaje (např. krmivo, elektřina...)" style="flex:3">
+        <input type="number" id="naklad-cena" placeholder="Částka v Kč" style="flex:1">
+        <button class="btn-add" onclick="pridatNaklad()">PŘIDAT VÝDAJ</button>
     </div>
-
-    <div class="sekce">
-        <h3>💰 Poslední Tržby (Příjmy)</h3>
-        <div id="seznam-trzeb" class="seznam-polozek">Načítám příjmy...</div>
-    </div>
+    <div id="seznam-nakladu" class="seznam-polozek">Načítám výdaje...</div>
 </div>
 
 <div class="sekce">
     <h3>📅 Roční přehled <span id="label-rok"></span></h3>
     <table>
         <thead>
-            <tr><th>Měsíc</th><th>Tržby</th><th>Náklady</th><th>Zisk</th></tr>
+            <tr><th>Měsíc</th><th>Celkové Tržby</th><th>Celkové Náklady</th><th>Výsledek (Zisk)</th></tr>
         </thead>
         <tbody id="tabulka-rok"></tbody>
     </table>
@@ -93,9 +86,7 @@
             const data = snap.val() || {};
             let htmlRok = "";
             let celkemTrzbyMesic = 0, celkemNakladyMesic = 0;
-
-            // Výpisy pro aktuální měsíc
-            let htmlVydaje = "", htmlTrzby = "";
+            let htmlVydaje = "";
 
             for (let m = 1; m <= 12; m++) {
                 const klic = m + "_" + rok;
@@ -103,51 +94,63 @@
                 
                 let tMesic = 0, nMesic = 0;
                 
+                // Tržby jen sčítáme (vypisovat je nebudeme)
                 if (mesicData.trzby) {
-                    Object.keys(mesicData.trzby).forEach(id => {
-                        const t = mesicData.trzby[id];
+                    Object.values(mesicData.trzby).forEach(t => {
                         tMesic += parseInt(t.castka || 0);
-                        if (klic === klicDnes) {
-                            htmlTrzby += `<div class="polozka-radek"><span><b>${t.zakaznik}</b>: ${t.castka} Kč</span> <button class="btn-del" onclick="smazat('trzby','${id}')">Smazat</button></div>`;
-                        }
                     });
                 }
+
+                // Výdaje sčítáme a u aktuálního měsíce vypisujeme seznam
                 if (mesicData.vydaje) {
                     Object.keys(mesicData.vydaje).forEach(id => {
                         const v = mesicData.vydaje[id];
                         nMesic += parseInt(v.castka || 0);
                         if (klic === klicDnes) {
-                            htmlVydaje += `<div class="polozka-radek"><span><b>${v.popis}</b>: ${v.castka} Kč</span> <button class="btn-del" onclick="smazat('vydaje','${id}')">Smazat</button></div>`;
+                            htmlVydaje += `
+                                <div class="polozka-radek">
+                                    <span><strong>${v.popis}</strong></span>
+                                    <span>${v.castka} Kč <button class="btn-del" onclick="smazat('vydaje','${id}')" style="margin-left:15px">✕</button></span>
+                                </div>`;
                         }
                     });
                 }
 
-                if (klic === klicDnes) { celkemTrzbyMesic = tMesic; celkemNakladyMesic = nMesic; }
+                if (klic === klicDnes) { 
+                    celkemTrzbyMesic = tMesic; 
+                    celkemNakladyMesic = nMesic; 
+                }
 
                 const z = tMesic - nMesic;
-                htmlRok += `<tr><td>${nazvyMesicu[m-1]}</td><td style="color:green">${tMesic} Kč</td><td style="color:red">${nMesic} Kč</td><td style="font-weight:bold">${z} Kč</td></tr>`;
+                htmlRok += `
+                    <tr>
+                        <td>${nazvyMesicu[m-1]}</td>
+                        <td style="color:green">${tMesic.toLocaleString()} Kč</td>
+                        <td style="color:red">${nMesic.toLocaleString()} Kč</td>
+                        <td style="font-weight:bold; color:${z >= 0 ? 'black' : 'red'}">${z.toLocaleString()} Kč</td>
+                    </tr>`;
             }
 
             document.getElementById("tabulka-rok").innerHTML = htmlRok;
-            document.getElementById("seznam-nakladu").innerHTML = htmlVydaje || "Žádné náklady.";
-            document.getElementById("seznam-trzeb").innerHTML = htmlTrzby || "Žádné tržby.";
-            document.getElementById("sum-trzby").innerText = celkemTrzbyMesic + " Kč";
-            document.getElementById("sum-naklady").innerText = celkemNakladyMesic + " Kč";
-            document.getElementById("sum-zisk").innerText = (celkemTrzbyMesic - celkemNakladyMesic) + " Kč";
+            document.getElementById("seznam-nakladu").innerHTML = htmlVydaje || '<p style="text-align:center; color:#999">V tomto měsíci zatím žádné náklady.</p>';
+            document.getElementById("sum-trzby").innerText = celkemTrzbyMesic.toLocaleString() + " Kč";
+            document.getElementById("sum-naklady").innerText = celkemNakladyMesic.toLocaleString() + " Kč";
+            document.getElementById("sum-zisk").innerText = (celkemTrzbyMesic - celkemNakladyMesic).toLocaleString() + " Kč";
         });
     }
 
     function pridatNaklad() {
         const nazev = document.getElementById("naklad-nazev").value;
         const castka = document.getElementById("naklad-cena").value;
-        if (!nazev || !castka) return;
+        if (!nazev || !castka) { alert("Vyplňte popis i částku."); return; }
         const klic = (new Date().getMonth() + 1) + "_" + document.getElementById("select-rok").value;
         db.ref("finance/" + klic + "/vydaje").push({ popis: nazev, castka: parseInt(castka) });
-        document.getElementById("naklad-nazev").value = ""; document.getElementById("naklad-cena").value = "";
+        document.getElementById("naklad-nazev").value = ""; 
+        document.getElementById("naklad-cena").value = "";
     }
 
     function smazat(typ, id) {
-        if (!confirm("Opravdu smazat tuto položku?")) return;
+        if (!confirm("Smazat tento výdaj?")) return;
         const klic = (new Date().getMonth() + 1) + "_" + document.getElementById("select-rok").value;
         db.ref(`finance/${klic}/${typ}/${id}`).remove();
     }
