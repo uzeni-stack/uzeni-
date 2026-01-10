@@ -13,7 +13,6 @@
         
         .section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         
-        /* OVLÁDACÍ PANEL S TLAČÍTKY */
         .produkt-radek { border-bottom: 1px solid #eee; padding: 15px 0; }
         .flex-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; }
         
@@ -28,11 +27,14 @@
         .btn-pridat { 
             background: var(--primary); color: white; border: none; padding: 12px; 
             border-radius: 10px; font-weight: bold; cursor: pointer; flex-grow: 1; font-size: 1rem;
+            transition: all 0.2s;
         }
+        /* Styl pro potvrzení přidání */
+        .btn-success { background: var(--accent) !important; }
 
-        /* KOŠÍK */
         .kosik-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ccc; }
         .btn-odeslat { width: 100%; background: var(--accent); color: white; border: none; padding: 18px; border-radius: 15px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .btn-odeslat:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -83,13 +85,12 @@
                             <input type="text" id="vaha-${zbozi}" class="vaha-displej" value="1.0" readonly>
                             <button class="btn-krok" onclick="upravitVahu('${zbozi}', 0.5)">+</button>
                         </div>
-                        <button class="btn-pridat" onclick="vlozitDoKosiku('${zbozi}')">PŘIDAT</button>
+                        <button class="btn-pridat" id="btn-add-${zbozi.replace(/\s+/g, '')}" onclick="vlozitDoKosiku('${zbozi}', this)">PŘIDAT</button>
                     </div>
                 </div>`;
         });
     });
 
-    // Funkce pro tlačítka PLUS a MÍNUS
     function upravitVahu(id, oKolik) {
         const pole = document.getElementById("vaha-" + id);
         let hodnota = parseFloat(pole.value);
@@ -97,8 +98,8 @@
         pole.value = hodnota.toFixed(1);
     }
 
-    // Přidání do košíku
-    function vlozitDoKosiku(nazev) {
+    // PŘIDÁNÍ DO KOŠÍKU S VIZUÁLNÍ ODEZVOU
+    function vlozitDoKosiku(nazev, tlacitko) {
         const pole = document.getElementById("vaha-" + nazev);
         const vaha = parseFloat(pole.value);
         const index = kosik.findIndex(i => i.nazev === nazev);
@@ -106,7 +107,19 @@
         if (index > -1) { kosik[index].vaha += vaha; } 
         else { kosik.push({ nazev: nazev, vaha: vaha, cenaKg: nabidka[nazev] }); }
         
-        pole.value = "1.0"; // Reset
+        // EFEKT TLAČÍTKA
+        const puvodniText = tlacitko.innerText;
+        tlacitko.innerText = "PŘIDÁNO ✅";
+        tlacitko.classList.add("btn-success");
+        tlacitko.disabled = true;
+
+        setTimeout(() => {
+            tlacitko.innerText = puvodniText;
+            tlacitko.classList.remove("btn-success");
+            tlacitko.disabled = false;
+        }, 800);
+
+        pole.value = "1.0"; 
         prekresliKosik();
     }
 
@@ -136,22 +149,39 @@
     function odeslatObjednavku() {
         const jmeno = document.getElementById("zakaznik-jmeno").value.trim();
         const tlacitko = document.getElementById("btn-odeslat");
-        if (!jmeno) { alert("Zadejte jméno!"); return; }
+        
+        if (!jmeno) { 
+            alert("Prosím, vyplňte své jméno!"); 
+            document.getElementById("zakaznik-jmeno").focus();
+            return; 
+        }
         
         tlacitko.disabled = true;
-        tlacitko.innerText = "Posílám...";
+        tlacitko.innerText = "Posílám objednávku...";
         
         const idSkupiny = "obj_" + Date.now();
         const zapisy = kosik.map(p => {
             return db.ref("objednavky/" + p.nazev).push({
-                zakaznik: jmeno, vaha_objednano: p.vaha, skutecna_vaha_gr: 0, vydano: false, datum: new Date().toLocaleDateString(), id_skupiny: idSkupiny
+                zakaznik: jmeno, 
+                vaha_objednano: p.vaha, 
+                skutecna_vaha_gr: 0, 
+                vydano: false, 
+                datum: new Date().toLocaleDateString('cs-CZ'), 
+                id_skupiny: idSkupiny
             });
         });
 
         Promise.all(zapisy).then(() => {
-            alert("Hotovo! Objednávka odeslána.");
-            kosik = []; document.getElementById("zakaznik-jmeno").value = ""; prekresliKosik();
-            tlacitko.disabled = false; tlacitko.innerText = "ODESLAT OBJEDNÁVKU";
+            alert("Děkujeme! Vaše objednávka byla úspěšně odeslána.");
+            kosik = []; 
+            document.getElementById("zakaznik-jmeno").value = ""; 
+            prekresliKosik();
+            tlacitko.disabled = false; 
+            tlacitko.innerText = "ODESLAT OBJEDNÁVKU";
+        }).catch(err => {
+            alert("Chyba při odesílání, zkuste to prosím znovu.");
+            tlacitko.disabled = false;
+            tlacitko.innerText = "ODESLAT OBJEDNÁVKU";
         });
     }
 </script>
