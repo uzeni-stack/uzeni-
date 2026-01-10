@@ -29,11 +29,13 @@
         
         .reset-btn { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; float: right; margin-left: 5px; }
         h2 { color: #1a237e; margin-top: 0; }
+        .zpět-link { text-decoration: none; color: #1a237e; font-size: 0.9rem; font-weight: bold; display: block; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <a href="index.html" class="zpět-link">← Zpět na rozcestník</a>
     <button class="reset-btn" onclick="obnovitSkryte()">Obnovit skryté</button>
     <button class="reset-btn" onclick="resetVsech()" style="background:#555;">Reset fajfek</button>
     
@@ -55,10 +57,12 @@
 
     let vsechnyKontakty = {};
 
+    // 1. Načtení zprávy z databáze
     db.ref("nastaveni/sablona_zpravy").on("value", snap => {
         if (snap.exists()) document.getElementById("msg").value = snap.val();
     });
 
+    // 2. Načtení uložených telefonů z databáze
     db.ref("kontakty").on("value", snap => {
         vsechnyKontakty = snap.val() || {};
         nactiObjednavky();
@@ -66,10 +70,10 @@
 
     function ulozZpravuDoDB() {
         db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value)
-            .then(() => alert("Text zprávy uložen!"));
+            .then(() => alert("Text zprávy uložen v databázi!"));
     }
 
-    // Funkce pro uložení telefonu a změnu vzhledu tlačítka
+    // 3. Uložení telefonu a změna stavu tlačítka
     function potvrditUlozeniTel(jmeno, safeId) {
         const cislo = document.getElementById("tel-" + safeId).value;
         const firebaseKey = jmeno.replace(/[.#$\[\]]/g, "_");
@@ -82,11 +86,13 @@
             });
     }
 
-    // Funkce, která vrátí tlačítko do stavu ULOŽIT, pokud člověk začne psát nové číslo
+    // Reset tlačítka při psaní nového čísla
     function zmenaCisla(safeId) {
         const tlacitko = document.getElementById("btn-save-" + safeId);
-        tlacitko.innerText = "ULOŽIT";
-        tlacitko.classList.remove("btn-saved");
+        if (tlacitko.classList.contains("btn-saved")) {
+            tlacitko.innerText = "ULOŽIT";
+            tlacitko.classList.remove("btn-saved");
+        }
     }
 
     function nactiObjednavky() {
@@ -115,7 +121,6 @@
             const ulozeneCislo = vsechnyKontakty[firebaseKey] || "";
             const jeHotovo = localStorage.getItem("done-" + safeId) === "true";
             
-            // Pokud už číslo v DB je, tlačítko bude rovnou šedé "ULOŽENO"
             const btnClass = ulozeneCislo ? "btn-save-tel btn-saved" : "btn-save-tel";
             const btnText = ulozeneCislo ? "ULOŽENO" : "ULOŽIT";
             
@@ -132,6 +137,7 @@
         });
     }
 
+    // 4. POSÍLÁNÍ - Tato verze neotvírá nová a nová okna
     function poslat(safeId) {
         let tel = document.getElementById("tel-" + safeId).value.replace(/\D/g, '');
         const zprava = document.getElementById("msg").value;
@@ -139,12 +145,16 @@
         if (!tel) { alert("Chybí telefon!"); return; }
         if (tel.length === 9) tel = "420" + tel;
 
+        // Označit lokálně jako vyřízené
         localStorage.setItem("done-" + safeId, "true");
         document.getElementById("row-" + safeId).classList.add("odeslano");
         const chk = document.querySelector(`#row-${safeId} input[type="checkbox"]`);
         if(chk) chk.checked = true;
 
-        window.open(`https://wa.me/${tel}?text=${encodeURIComponent(zprava)}`, '_blank');
+        const url = `https://wa.me/${tel}?text=${encodeURIComponent(zprava)}`;
+        
+        // window.open s názvem okna 'wa_okno' zajistí přepisování jedné karty
+        window.open(url, 'wa_okno');
     }
 
     function oznacHotovo(safeId, stav) {
