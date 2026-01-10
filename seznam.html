@@ -2,81 +2,98 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Správce - v1.3</title>
+    <title>WhatsApp Správce - v1.4</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 15px; display: flex; justify-content: center; }
-        .container { 
-            background: white; padding: 25px; border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 700px; 
-            position: relative; /* Nutné pro pozicování tlačítka vpravo */
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
         
-        /* VELKÉ TLAČÍTKO ZPĚT VPRAVO */
-        .btn-back { 
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-decoration: none; 
-            background: #d32f2f; /* Červená, aby byla vidět */
-            color: white; 
-            padding: 12px 20px; 
-            border-radius: 10px; 
-            font-weight: bold; 
-            font-size: 1rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: 0.2s;
+        /* Hlavní rozložení - dva sloupce */
+        .main-layout { 
+            display: grid; 
+            grid-template-columns: 1fr 220px; /* Seznam vlevo, panel vpravo */
+            gap: 20px; 
+            width: 100%; 
+            max-width: 950px; 
         }
-        .btn-back:hover { background: #b71c1c; transform: scale(1.05); }
 
-        .header-area { margin-right: 160px; } /* Udělá místo pro tlačítko vpravo */
-
-        .global-box { background: #e7f3ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #bbdefb; margin-top: 10px; }
-        textarea { width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-sizing: border-box; resize: none; font-size: 1rem; margin-bottom: 10px; }
+        .left-column { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         
-        .zakaznik-radek { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; gap: 5px; }
+        /* Pravý panel, který drží pozici i při skrolování */
+        .right-panel { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 15px; height: fit-content; }
+
+        /* OBROVSKÉ TLAČÍTKO ZPĚT */
+        .btn-back-giant { 
+            text-decoration: none; background: #d32f2f; color: white; 
+            padding: 30px 10px; border-radius: 15px; font-weight: bold; 
+            font-size: 1.4rem; text-align: center;
+            box-shadow: 0 6px 15px rgba(211, 47, 47, 0.4);
+            transition: 0.3s;
+        }
+        .btn-back-giant:hover { background: #b71c1c; transform: translateY(-3px); }
+
+        .control-box { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; }
+        .control-box h4 { margin-top: 0; color: #555; font-size: 0.8rem; text-transform: uppercase; }
+
+        .global-box { background: #e7f3ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #bbdefb; }
+        textarea { width: 100%; height: 100px; border: 1px solid #ccc; border-radius: 8px; padding: 10px; resize: none; font-size: 1rem; margin-bottom: 10px; }
+        
+        .zakaznik-radek { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; gap: 8px; }
         .odeslano { background: #f9f9f9; opacity: 0.5; }
         
-        .jmeno { font-weight: bold; flex: 1; font-size: 0.95rem; min-width: 80px; }
-        .tel-input { width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
+        .jmeno { font-weight: bold; flex: 1; font-size: 0.9rem; }
+        .tel-input { width: 90px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 0.85rem; }
         
         .btn-wa { background: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; min-width: 75px; }
+        .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; min-width: 70px; }
         .btn-saved { background: #9e9e9e !important; cursor: default; }
         
-        .btn-save-main { background: #3949ab; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 5px; }
+        .btn-save-main { background: #3949ab; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-hide { background: #eee; color: #666; border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
         
-        .reset-btns-top { margin-bottom: 10px; }
-        .reset-btn { background: #555; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; margin-right: 5px; }
-        
-        h2 { color: #1a237e; margin: 0; padding-bottom: 5px; }
-        .verze { font-size: 0.7rem; color: #bbb; }
+        .side-btn { background: #555; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-bottom: 8px; font-weight: bold; }
+        .side-btn-red { background: #f44336; }
+
+        h2 { color: #1a237e; margin-top: 0; }
+        .verze { font-size: 0.7rem; color: #bbb; float: right; }
+
+        @media (max-width: 800px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .right-panel { position: static; }
+        }
     </style>
 </head>
 <body>
 
 <iframe name="skryty_ramec" style="display:none;"></iframe>
 
-<div class="container">
-    <a href="index.html" class="btn-back">⬅ ZPĚT</a>
-    
-    <div class="header-area">
-        <h2>📱 WhatsApp Sync <span class="verze">v1.3</span></h2>
-        <div class="reset-btns-top">
-            <button class="reset-btn" onclick="obnovitSkryte()">Obnovit skryté</button>
-            <button class="reset-btn" onclick="resetVsech()">Reset fajfek</button>
+<div class="main-layout">
+    <div class="left-column">
+        <span class="verze">v1.4</span>
+        <h2>📱 WhatsApp Cloud Sync</h2>
+        
+        <div class="global-box">
+            <label><b>Společná zpráva pro všechny:</b></label>
+            <textarea id="msg"></textarea>
+            <button class="btn-save-main" onclick="ulozZpravuDoDB()">💾 ULOŽIT TEXT ZPRÁVY</button>
         </div>
-    </div>
-    
-    <div class="global-box">
-        <label><b>Společná zpráva:</b></label>
-        <textarea id="msg"></textarea>
-        <button class="btn-save-main" onclick="ulozZpravuDoDB()">💾 ULOŽIT TEXT ZPRÁVY</button>
+
+        <div id="list">Načítám zákazníky...</div>
     </div>
 
-    <div id="list">Načítám zákazníky...</div>
+    <div class="right-panel">
+        <a href="index.html" class="btn-back-giant">⬅ ZPĚT<br><small style="font-size: 0.8rem; font-weight: normal;">NA ADMINA</small></a>
+        
+        <div class="control-box">
+            <h4>Správa seznamu</h4>
+            <button class="side-btn" onclick="obnovitSkryte()">👁 OBNOVIT SKRYTÉ</button>
+            <button class="side-btn side-btn-red" onclick="resetVsech()">♻ RESET FAJFEK</button>
+        </div>
+        
+        <div style="font-size: 0.75rem; color: #888; text-align: center; padding: 10px;">
+            Poznámka: Změny se ukládají v reálném čase do cloudu.
+        </div>
+    </div>
 </div>
 
 <script>
@@ -109,7 +126,7 @@
     }
 
     function ulozZpravuDoDB() {
-        db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value).then(() => alert("Uloženo!"));
+        db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value).then(() => alert("Zpráva uložena!"));
     }
 
     function potvrditUlozeniTel(jmeno, safeId) {
@@ -180,7 +197,7 @@
     }
 
     function resetVsech() {
-        if (confirm("Resetovat fajfky?")) {
+        if (confirm("Resetovat všechny odeslané?")) {
             for (let key in localStorage) { if (key.startsWith("done-")) localStorage.removeItem(key); }
             location.reload();
         }
