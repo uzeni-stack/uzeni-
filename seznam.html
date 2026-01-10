@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Správce - v1.7</title>
+    <title>WhatsApp Správce - v1.9</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -13,30 +13,29 @@
         
         .btn-back-giant { 
             text-decoration: none; background: #d32f2f; color: white; 
-            padding: 30px 10px; border-radius: 15px; font-weight: bold; 
-            font-size: 1.4rem; text-align: center; box-shadow: 0 6px 15px rgba(211, 47, 47, 0.4); transition: 0.3s;
+            padding: 25px 10px; border-radius: 15px; font-weight: bold; 
+            font-size: 1.2rem; text-align: center; box-shadow: 0 6px 15px rgba(211, 47, 47, 0.4);
         }
-        .btn-back-giant:hover { background: #b71c1c; transform: translateY(-3px); }
 
         .global-box { background: #e7f3ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #bbdefb; }
-        textarea { width: 100%; height: 100px; border: 1px solid #ccc; border-radius: 8px; padding: 10px; resize: none; font-size: 1rem; }
+        textarea { width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 8px; padding: 10px; resize: none; font-size: 1rem; }
         
         .zakaznik-radek { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; gap: 8px; }
-        .odeslano { background: #f4f4f4; opacity: 0.6; }
+        .odeslano { background: #f4f4f4; opacity: 0.5; }
         .jmeno { font-weight: bold; flex: 1; font-size: 0.9rem; }
         .tel-input { width: 90px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
         
-        /* Odkaz vypadající jako tlačítko WA */
-        .btn-wa-link { 
-            background: #25D366; color: white; text-decoration: none; 
-            padding: 10px 15px; border-radius: 10px; font-weight: bold; 
-            font-size: 0.9rem; display: inline-block;
+        /* Tlačítko upravené pro bleskové klikání */
+        .btn-wa { 
+            background: #25D366; color: white; border: none; padding: 12px 20px; 
+            border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem;
         }
+        .btn-wa:active { background: #128C7E; transform: scale(0.95); }
         
-        .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
+        .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; }
         .btn-saved { background: #9e9e9e !important; }
         .btn-save-main { background: #3949ab; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .side-btn { background: #555; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 8px; font-weight: bold; }
+        .side-btn { background: #555; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
         .verze { font-size: 0.7rem; color: #bbb; float: right; }
     </style>
 </head>
@@ -44,20 +43,19 @@
 
 <div class="main-layout">
     <div class="left-column">
-        <span class="verze">v1.7</span>
+        <span class="verze">v1.9</span>
         <h2>📱 WhatsApp Cloud Sync</h2>
         
         <div class="global-box">
-            <label><b>Společná zpráva:</b></label>
-            <textarea id="msg" oninput="aktualizovatOdkazy()"></textarea>
+            <textarea id="msg" placeholder="Zadejte text zprávy..."></textarea>
             <button class="btn-save-main" onclick="ulozZpravuDoDB()">💾 ULOŽIT TEXT ZPRÁVY</button>
         </div>
         <div id="list">Načítám zákazníky...</div>
     </div>
 
     <div class="right-panel">
-        <a href="admin.html" class="btn-back-giant">⬅ ZPĚT<br><small style="font-size: 0.8rem; font-weight: normal;">NA ROZCESTNÍK</small></a>
-        <div class="control-box" style="background:white; padding:15px; border-radius:15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align:center;">
+        <a href="admin.html" class="btn-back-giant">⬅ ZPĚT</a>
+        <div class="control-box" style="background:white; padding:15px; border-radius:15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:10px;">
             <button class="side-btn" onclick="obnovitSkryte()">👁 OBNOVIT SKRYTÉ</button>
             <button class="side-btn" style="background:#f44336" onclick="resetVsech()">♻ RESET FAJFEK</button>
         </div>
@@ -71,10 +69,7 @@
     let vsechnyKontakty = {};
 
     db.ref("nastaveni/sablona_zpravy").on("value", snap => {
-        if (snap.exists()) {
-            document.getElementById("msg").value = snap.val();
-            aktualizovatOdkazy();
-        }
+        if (snap.exists()) document.getElementById("msg").value = snap.val();
     });
 
     db.ref("kontakty").on("value", snap => {
@@ -96,7 +91,7 @@
     }
 
     function ulozZpravuDoDB() {
-        db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value).then(() => alert("Zpráva uložena!"));
+        db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value).then(() => alert("Uloženo!"));
     }
 
     function potvrditUlozeniTel(jmeno, safeId) {
@@ -105,7 +100,6 @@
         db.ref("kontakty/" + firebaseKey).set(cislo).then(() => {
             const btn = document.getElementById("btn-save-" + safeId);
             btn.innerText = "ULOŽENO"; btn.classList.add("btn-saved");
-            aktualizovatOdkazy(); // Refresh odkazů při změně čísla
         });
     }
 
@@ -123,44 +117,38 @@
                 <div class="zakaznik-radek ${jeHotovo ? 'odeslano' : ''}" id="row-${safeId}">
                     <input type="checkbox" ${jeHotovo ? 'checked' : ''} onchange="oznacHotovo('${safeId}', this.checked)">
                     <span class="jmeno">${jmeno}</span>
-                    <input type="text" id="tel-${safeId}" class="tel-input" value="${ulozeneCislo}" oninput="aktualizovatOdkazy()">
+                    <input type="text" id="tel-${safeId}" class="tel-input" value="${ulozeneCislo}">
                     <button id="btn-save-${safeId}" class="btn-save-tel ${ulozeneCislo ? 'btn-saved' : ''}" onclick="potvrditUlozeniTel('${jmeno}', '${safeId}')">${ulozeneCislo ? 'ULOŽENO' : 'ULOŽIT'}</button>
-                    <a href="#" target="_blank" id="link-${safeId}" class="btn-wa-link" onclick="oznacOdeslano('${safeId}')">WA</a>
+                    <button class="btn-wa" onclick="poslat('${safeId}')">WA</button>
                     <button style="background:#eee;border:none;padding:8px;border-radius:8px;cursor:pointer" onclick="skrytZakaznika('${safeId}')">✕</button>
                 </div>`;
         });
-        aktualizovatOdkazy();
     }
 
-    // Tato funkce přepočítá všechny odkazy wa.me podle aktuálního textu a čísel
-    function aktualizovatOdkazy() {
+    // POSÍLÁNÍ BEZ OTEVÍRÁNÍ NOVÝCH KARET (POKUD JE APPKA)
+    function poslat(safeId) {
+        let tel = document.getElementById("tel-" + safeId).value.replace(/\D/g, '');
         const zprava = encodeURIComponent(document.getElementById("msg").value);
-        const radky = document.querySelectorAll('.zakaznik-radek');
-        radky.forEach(radek => {
-            const safeId = radek.id.replace('row-', '');
-            const telInput = document.getElementById("tel-" + safeId);
-            const link = document.getElementById("link-" + safeId);
-            if (telInput && link) {
-                let tel = telInput.value.replace(/\D/g, '');
-                if (tel.length === 9) tel = "420" + tel;
-                if (tel) {
-                    link.href = `https://wa.me/${tel}?text=${zprava}`;
-                    link.style.opacity = "1";
-                    link.style.pointerEvents = "auto";
-                } else {
-                    link.href = "#";
-                    link.style.opacity = "0.3";
-                    link.style.pointerEvents = "none";
-                }
-            }
-        });
-    }
+        if (!tel) { alert("Chybí telefon!"); return; }
+        if (tel.length === 9) tel = "420" + tel;
 
-    function oznacOdeslano(safeId) {
+        // Označit jako hotovo hned
         localStorage.setItem("done-" + safeId, "true");
         const radek = document.getElementById("row-" + safeId);
         radek.classList.add("odeslano");
         radek.querySelector('input[type="checkbox"]').checked = true;
+
+        // POUŽITÍ api.whatsapp.com - tento formát nejlépe vyvolává aplikaci bez nové karty
+        // Pokud používáš mobil, přepne tě to rovnou do appky.
+        window.location.assign(`whatsapp://send?phone=${tel}&text=${zprava}`);
+        
+        // Záložní řešení pro PC (pokud protokol whatsapp:// selže)
+        setTimeout(() => {
+            if (document.hasFocus()) {
+                 // Pokud se po vteřině nic nestalo, zkusíme standardní cestu
+                 window.open(`https://wa.me/${tel}?text=${zprava}`, '_blank');
+            }
+        }, 500);
     }
 
     function oznacHotovo(safeId, stav) {
