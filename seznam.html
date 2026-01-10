@@ -19,9 +19,7 @@
         
         .btn-wa { background: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
         
-        /* Styl pro tlačítko ULOŽIT */
         .btn-save-tel { background: #ff9800; color: white; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; min-width: 75px; }
-        /* Styl pro tlačítko ULOŽENO (šedé) */
         .btn-saved { background: #9e9e9e !important; cursor: default; }
         
         .btn-save-main { background: #1a237e; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 5px; }
@@ -29,13 +27,13 @@
         
         .reset-btn { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; float: right; margin-left: 5px; }
         h2 { color: #1a237e; margin-top: 0; }
-        .zpět-link { text-decoration: none; color: #1a237e; font-size: 0.9rem; font-weight: bold; display: block; margin-bottom: 10px; }
+        .back-link { text-decoration: none; color: #1a237e; font-size: 0.9rem; font-weight: bold; display: inline-block; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="index.html" class="zpět-link">← Zpět na rozcestník</a>
+    <a href="index.html" class="back-link">← Zpět na rozcestník</a>
     <button class="reset-btn" onclick="obnovitSkryte()">Obnovit skryté</button>
     <button class="reset-btn" onclick="resetVsech()" style="background:#555;">Reset fajfek</button>
     
@@ -57,12 +55,12 @@
 
     let vsechnyKontakty = {};
 
-    // 1. Načtení zprávy z databáze
+    // 1. Načtení zprávy
     db.ref("nastaveni/sablona_zpravy").on("value", snap => {
         if (snap.exists()) document.getElementById("msg").value = snap.val();
     });
 
-    // 2. Načtení uložených telefonů z databáze
+    // 2. Načtení kontaktů
     db.ref("kontakty").on("value", snap => {
         vsechnyKontakty = snap.val() || {};
         nactiObjednavky();
@@ -70,10 +68,9 @@
 
     function ulozZpravuDoDB() {
         db.ref("nastaveni/sablona_zpravy").set(document.getElementById("msg").value)
-            .then(() => alert("Text zprávy uložen v databázi!"));
+            .then(() => alert("Zpráva uložena v databázi!"));
     }
 
-    // 3. Uložení telefonu a změna stavu tlačítka
     function potvrditUlozeniTel(jmeno, safeId) {
         const cislo = document.getElementById("tel-" + safeId).value;
         const firebaseKey = jmeno.replace(/[.#$\[\]]/g, "_");
@@ -86,10 +83,9 @@
             });
     }
 
-    // Reset tlačítka při psaní nového čísla
     function zmenaCisla(safeId) {
         const tlacitko = document.getElementById("btn-save-" + safeId);
-        if (tlacitko.classList.contains("btn-saved")) {
+        if (tlacitko && tlacitko.classList.contains("btn-saved")) {
             tlacitko.innerText = "ULOŽIT";
             tlacitko.classList.remove("btn-saved");
         }
@@ -137,7 +133,7 @@
         });
     }
 
-    // 4. POSÍLÁNÍ - Tato verze neotvírá nová a nová okna
+    // TATO FUNKCE NYNÍ NEOTVÍRÁ NOVÁ OKNA
     function poslat(safeId) {
         let tel = document.getElementById("tel-" + safeId).value.replace(/\D/g, '');
         const zprava = document.getElementById("msg").value;
@@ -145,16 +141,21 @@
         if (!tel) { alert("Chybí telefon!"); return; }
         if (tel.length === 9) tel = "420" + tel;
 
-        // Označit lokálně jako vyřízené
+        // Označit jako odeslané (zešednutí řádku)
         localStorage.setItem("done-" + safeId, "true");
-        document.getElementById("row-" + safeId).classList.add("odeslano");
-        const chk = document.querySelector(`#row-${safeId} input[type="checkbox"]`);
-        if(chk) chk.checked = true;
+        const radek = document.getElementById("row-" + safeId);
+        if (radek) {
+            radek.classList.add("odeslano");
+            const chk = radek.querySelector('input[type="checkbox"]');
+            if (chk) chk.checked = true;
+        }
 
         const url = `https://wa.me/${tel}?text=${encodeURIComponent(zprava)}`;
         
-        // window.open s názvem okna 'wa_okno' zajistí přepisování jedné karty
-        window.open(url, 'wa_okno');
+        // Místo window.open použijeme přesměrování aktuálního okna. 
+        // WhatsApp link wa.me vyvolá v systému dotaz na otevření aplikace, 
+        // ale samotná stránka se nepřepne, pokud aplikaci potvrdíš.
+        location.href = url;
     }
 
     function oznacHotovo(safeId, stav) {
